@@ -21,8 +21,8 @@ UA_Server_addPubSubConnection(UA_Server *server,
     UA_PubSubTransportLayer *tl = NULL;
     for(size_t i = 0; i < server->config.pubsubTransportLayersSize; i++) {
         if(connectionConfig &&
-           UA_String_equal(&server->config.pubsubTransportLayers[i].transportProfileUri,
-                           &connectionConfig->transportProfileUri)) {
+            UA_String_equal(&server->config.pubsubTransportLayers[i].transportProfileUri,
+                            &connectionConfig->transportProfileUri)) {
             tl = &server->config.pubsubTransportLayers[i];
         }
     }
@@ -51,7 +51,7 @@ UA_Server_addPubSubConnection(UA_Server *server,
     /* Create new connection and add to UA_PubSubManager */
     UA_PubSubConnection *newConnectionsField = (UA_PubSubConnection *)
         UA_realloc(server->pubSubManager.connections,
-                   sizeof(UA_PubSubConnection) * (server->pubSubManager.connectionsSize + 1));
+            sizeof(UA_PubSubConnection) * (server->pubSubManager.connectionsSize + 1));
     if(!newConnectionsField) {
         UA_PubSubConnectionConfig_deleteMembers(tmpConnectionConfig);
         UA_free(tmpConnectionConfig);
@@ -102,7 +102,7 @@ UA_Server_addPubSubConnection(UA_Server *server,
     return UA_STATUSCODE_GOOD;
 }
 
-UA_StatusCode
+UA_StatusCode 
 UA_Server_removePubSubConnection(UA_Server *server, const UA_NodeId connection) {
     //search the identified Connection and store the Connection index
     size_t connectionIndex;
@@ -168,19 +168,19 @@ UA_Server_addPublishedDataSet(UA_Server *server, const UA_PublishedDataSetConfig
     if(UA_PublishedDataSetConfig_copy(publishedDataSetConfig, &tmpPublishedDataSetConfig) != UA_STATUSCODE_GOOD){
         UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
                      "PublishedDataSet creation failed. Configuration copy failed.");
-		result.addResult = UA_STATUSCODE_BADINTERNALERROR;
+        result.addResult = UA_STATUSCODE_BADINTERNALERROR;
         return result;
     }
     //create new PDS and add to UA_PubSubManager
     UA_PublishedDataSet *newPubSubDataSetField = (UA_PublishedDataSet *)
-            UA_realloc(server->pubSubManager.publishedDataSets,
-                       sizeof(UA_PublishedDataSet) * (server->pubSubManager.publishedDataSetsSize + 1));
+    UA_realloc(server->pubSubManager.publishedDataSets,
+            sizeof(UA_PublishedDataSet) * (server->pubSubManager.publishedDataSetsSize + 1));
     if(!newPubSubDataSetField) {
         UA_PublishedDataSetConfig_deleteMembers(&tmpPublishedDataSetConfig);
         UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
                      "PublishedDataSet creation failed. Out of Memory.");
-		result.addResult = UA_STATUSCODE_BADOUTOFMEMORY;
-		return result;
+        result.addResult = UA_STATUSCODE_BADOUTOFMEMORY;
+        return result;
     }
     server->pubSubManager.publishedDataSets = newPubSubDataSetField;
     UA_PublishedDataSet *newPubSubDataSet = &server->pubSubManager.publishedDataSets[(server->pubSubManager.publishedDataSetsSize)];
@@ -309,6 +309,8 @@ UA_PubSubManager_delete(UA_Server *server, UA_PubSubManager *pubSubManager) {
 /*      PubSub Jobs abstraction    */
 /***********************************/
 
+#ifndef UA_ENABLE_PUBSUB_CUSTOM
+
 UA_StatusCode
 UA_PubSubManager_addRepeatedCallback(UA_Server *server, UA_ServerCallback callback,
                                      void *data, UA_Double interval_ms, UA_UInt64 *callbackId) {
@@ -316,13 +318,15 @@ UA_PubSubManager_addRepeatedCallback(UA_Server *server, UA_ServerCallback callba
                                         server, data, interval_ms, callbackId);
 }
 
-UA_StatusCode
+#endif
+
+UA_StatusCode 
 UA_PubSubManager_changeRepeatedCallbackInterval(UA_Server *server, UA_UInt64 callbackId,
-                                                UA_Double interval_ms) {
+                                                              UA_Double interval_ms) {
     return UA_Timer_changeRepeatedCallbackInterval(&server->timer, callbackId, interval_ms);
 }
 
-void
+void 
 UA_PubSubManager_removeRepeatedPubSubCallback(UA_Server *server, UA_UInt64 callbackId) {
     UA_Timer_removeCallback(&server->timer, callbackId);
 }

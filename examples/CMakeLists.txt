@@ -1,14 +1,17 @@
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/plugins)
+include_directories(${PROJECT_SOURCE_DIR}/src/server)
 include_directories(${PROJECT_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/examples)
 include_directories(${PROJECT_SOURCE_DIR}/arch)
 include_directories(${PROJECT_SOURCE_DIR}/plugins/historydata)
 
+find_package(Threads REQUIRED)
+
 set(examples_headers
-    ${examples_headers}
-    ${PROJECT_SOURCE_DIR}/examples/common.h
-    )
+        ${examples_headers}
+        ${PROJECT_SOURCE_DIR}/examples/common.h
+        )
 
 
 if(UA_ENABLE_AMALGAMATION)
@@ -26,15 +29,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}/bin/exampl
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_BINARY_DIR}/bin/examples)
 
 macro(add_example EXAMPLE_NAME EXAMPLE_SOURCE)
-  add_executable(${EXAMPLE_NAME} ${STATIC_OBJECTS} ${EXAMPLE_SOURCE} ${ARGN} ${examples_headers})
-  target_link_libraries(${EXAMPLE_NAME} open62541 ${open62541_LIBRARIES})
-  assign_source_group(${EXAMPLE_SOURCE})
-  add_dependencies(${EXAMPLE_NAME} open62541-object)
-  set_target_properties(${EXAMPLE_NAME} PROPERTIES FOLDER "open62541/examples")
-  set_target_properties(${EXAMPLE_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-  if(UA_COMPILE_AS_CXX)
-    set_source_files_properties(${EXAMPLE_SOURCE} PROPERTIES LANGUAGE CXX)
-  endif()
+    add_executable(${EXAMPLE_NAME} ${STATIC_OBJECTS} ${EXAMPLE_SOURCE} ${ARGN} ${examples_headers})
+    target_link_libraries(${EXAMPLE_NAME} open62541 ${open62541_LIBRARIES})
+    assign_source_group(${EXAMPLE_SOURCE})
+    add_dependencies(${EXAMPLE_NAME} open62541-object)
+    set_target_properties(${EXAMPLE_NAME} PROPERTIES FOLDER "open62541/examples")
+    set_target_properties(${EXAMPLE_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+    if(UA_COMPILE_AS_CXX)
+        set_source_files_properties(${EXAMPLE_SOURCE} PROPERTIES LANGUAGE CXX)
+    endif()
 endmacro()
 
 #############
@@ -50,7 +53,7 @@ add_example(tutorial_server_variable tutorial_server_variable.c)
 add_example(tutorial_server_datasource tutorial_server_datasource.c)
 
 if(UA_ENABLE_SUBSCRIPTIONS)
-add_example(tutorial_server_monitoreditems tutorial_server_monitoreditems.c)
+    add_example(tutorial_server_monitoreditems tutorial_server_monitoreditems.c)
 endif()
 
 add_example(tutorial_server_variabletype tutorial_server_variabletype.c)
@@ -58,7 +61,7 @@ add_example(tutorial_server_variabletype tutorial_server_variabletype.c)
 add_example(tutorial_server_object tutorial_server_object.c)
 
 if(UA_ENABLE_METHODCALLS)
-  add_example(tutorial_server_method tutorial_server_method.c)
+    add_example(tutorial_server_method tutorial_server_method.c)
 endif()
 
 add_example(tutorial_client_firststeps tutorial_client_firststeps.c)
@@ -66,7 +69,7 @@ add_example(tutorial_client_firststeps tutorial_client_firststeps.c)
 add_example(tutorial_client_events tutorial_client_events.c)
 
 if(UA_ENABLE_SUBSCRIPTIONS_EVENTS)
-  add_example(tutorial_server_events tutorial_server_events.c)
+    add_example(tutorial_server_events tutorial_server_events.c)
 endif()
 
 ##################
@@ -100,7 +103,7 @@ add_example(client_connect_loop client_connect_loop.c)
 add_example(client_connectivitycheck_loop client_connectivitycheck_loop.c)
 
 if(UA_ENABLE_SUBSCRIPTIONS)
-add_example(client_subscription_loop client_subscription_loop.c)
+    add_example(client_subscription_loop client_subscription_loop.c)
 endif()
 
 ####################
@@ -134,14 +137,14 @@ if(UA_ENABLE_NODEMANAGEMENT)
 endif()
 
 if(UA_BUILD_SELFSIGNED_CERTIFICATE)
-  find_package(OpenSSL REQUIRED)
-  add_custom_command(OUTPUT server_cert.der
-                     COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/certs/create_self-signed.py ${CMAKE_CURRENT_BINARY_DIR}
-                     DEPENDS ${PROJECT_SOURCE_DIR}/tools/certs/create_self-signed.py
-                             ${PROJECT_SOURCE_DIR}/tools/certs/localhost.cnf)
-  add_custom_target(selfsigned ALL DEPENDS server_cert.der)
-  add_executable(server_certificate server_certificate.c ${STATIC_OBJECTS} server_cert.der)
-  target_link_libraries(server_certificate open62541 ${open62541_LIBRARIES})
+    find_package(OpenSSL REQUIRED)
+    add_custom_command(OUTPUT server_cert.der
+            COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/certs/create_self-signed.py ${CMAKE_CURRENT_BINARY_DIR}
+            DEPENDS ${PROJECT_SOURCE_DIR}/tools/certs/create_self-signed.py
+            ${PROJECT_SOURCE_DIR}/tools/certs/localhost.cnf)
+    add_custom_target(selfsigned ALL DEPENDS server_cert.der)
+    add_executable(server_certificate server_certificate.c ${STATIC_OBJECTS} server_cert.der)
+    target_link_libraries(server_certificate open62541 ${open62541_LIBRARIES})
 endif()
 
 if(UA_ENABLE_DISCOVERY_MULTICAST)
@@ -160,6 +163,14 @@ add_subdirectory(nodeset)
 if(UA_ENABLE_PUBSUB)
     add_example(tutorial_pubsub_connection pubsub/tutorial_pubsub_connection.c)
     add_example(tutorial_pubsub_publish pubsub/tutorial_pubsub_publish.c)
+
+    # modified version for TSN
+    if(UA_ENABLE_PUBSUB_CUSTOM)
+        add_example(pubsub_custom_publisher pubsub/pubsub_custom_publisher.c
+                ${CMAKE_SOURCE_DIR}/plugins/networking/ua_network_pubsub_udp_tai.c)
+        target_link_libraries(pubsub_custom_publisher Threads::Threads)
+    endif()
+
     if(UA_ENABLE_AMALGAMATION)
         message(WARNING "PubSub subscriber tutorial (preview) can not be used with AMALGAMATION. Skipping tutorial_pubsub_subscribe.")
     else(NOT UA_ENABLE_AMALGAMATION)

@@ -100,7 +100,13 @@ _UA_BEGIN_DECLS
  * Take a look on the PubSub Tutorials for mor details about the API usage.
  */
 
-typedef enum {
+#ifdef UA_ENABLE_PUBSUB_CUSTOM
+
+#include "ua_pubsub_networkmessage.h"
+
+#endif
+
+typedef enum { 
     UA_PUBSUB_PUBLISHERID_NUMERIC,
     UA_PUBSUB_PUBLISHERID_STRING
 } UA_PublisherIdType;
@@ -118,15 +124,23 @@ typedef struct {
     size_t connectionPropertiesSize;
     UA_KeyValuePair *connectionProperties;
     UA_Variant connectionTransportSettings;
+
+#ifdef UA_ENABLE_PUBSUB_CUSTOM
+    UA_Boolean useSoTxTime;
+    UA_UInt16 useDeadlineMode;
+    UA_UInt16 receiveErrors;
+    UA_Int32 soPriority;
+#endif
+
 } UA_PubSubConnectionConfig;
 
-UA_StatusCode UA_EXPORT
+UA_StatusCode UA_EXPORT 
 UA_Server_addPubSubConnection(UA_Server *server,
                               const UA_PubSubConnectionConfig *connectionConfig,
                               UA_NodeId *connectionIdentifier);
 
 /* Returns a deep copy of the config */
-UA_StatusCode UA_EXPORT
+UA_StatusCode UA_EXPORT 
 UA_Server_getPubSubConnectionConfig(UA_Server *server,
                                     const UA_NodeId connection,
                                     UA_PubSubConnectionConfig *config);
@@ -188,7 +202,7 @@ typedef struct {
     } config;
 } UA_PublishedDataSetConfig;
 
-void UA_EXPORT
+void UA_EXPORT 
 UA_PublishedDataSetConfig_deleteMembers(UA_PublishedDataSetConfig *pdsConfig);
 
 typedef struct {
@@ -206,7 +220,7 @@ UA_Server_addPublishedDataSet(UA_Server *server,
 /* Returns a deep copy of the config */
 UA_StatusCode UA_EXPORT
 UA_Server_getPublishedDataSetConfig(UA_Server *server, const UA_NodeId pds,
-                                    UA_PublishedDataSetConfig *config);
+                                                            UA_PublishedDataSetConfig *config);
 
 /* Remove PublishedDataSet, identified by the NodeId. Deletion of PDS removes
  * all contained and linked PDS Fields. Connected WriterGroups will be also
@@ -241,7 +255,7 @@ typedef struct {
         //events need other config later
     } field;
 } UA_DataSetFieldConfig;
-    
+
 void UA_EXPORT
 UA_DataSetFieldConfig_deleteMembers(UA_DataSetFieldConfig *dataSetFieldConfig);
 
@@ -259,9 +273,9 @@ UA_Server_addDataSetField(UA_Server *server,
 /* Returns a deep copy of the config */
 UA_StatusCode UA_EXPORT
 UA_Server_getDataSetFieldConfig(UA_Server *server, const UA_NodeId dsf,
-                                UA_DataSetFieldConfig *config);
+                                                        UA_DataSetFieldConfig *config);
 
-UA_DataSetFieldResult UA_EXPORT
+UA_DataSetFieldResult UA_EXPORT 
 UA_Server_removeDataSetField(UA_Server *server, const UA_NodeId dsf);
 
 /**
@@ -275,9 +289,9 @@ UA_Server_removeDataSetField(UA_Server *server, const UA_NodeId dsf);
  * contained in the WriterGroup. */
 
 typedef enum {
-    UA_PUBSUB_ENCODING_BINARY,
-    UA_PUBSUB_ENCODING_JSON,
-    UA_PUBSUB_ENCODING_UADP
+    UA_PUBSUB_ENCODING_BINARY, 
+    UA_PUBSUB_ENCODING_JSON, 
+    UA_PUBSUB_ENCODING_UADP 
 } UA_PubSubEncodingType;
 
 typedef struct {
@@ -297,6 +311,11 @@ typedef struct {
     /* non std. config parameter. maximum count of embedded DataSetMessage in
      * one NetworkMessage */
     UA_UInt16 maxEncapsulatedDataSetMessageCount;
+
+#ifdef UA_ENABLE_PUBSUB_CUSTOM
+    UA_Boolean enableRealTime;
+#endif
+
 } UA_WriterGroupConfig;
 
 void UA_EXPORT
@@ -315,10 +334,18 @@ UA_Server_getWriterGroupConfig(UA_Server *server, const UA_NodeId writerGroup,
 
 UA_StatusCode UA_EXPORT
 UA_Server_updateWriterGroupConfig(UA_Server *server, UA_NodeId writerGroupIdentifier,
-                                  const UA_WriterGroupConfig *config);
+                                                          const UA_WriterGroupConfig *config);
 
 UA_StatusCode UA_EXPORT
 UA_Server_removeWriterGroup(UA_Server *server, const UA_NodeId writerGroup);
+
+#ifdef UA_ENABLE_PUBSUB_CUSTOM
+
+UA_StatusCode
+UA_EXPORT UA_PubSUb_sendNetworkMessage(UA_Server *server, const UA_NodeId writerGroup,
+                                                     UA_WriterGroupConfig *config);
+
+#endif
 
 /**
  * .. _dsw:
@@ -366,7 +393,7 @@ UA_StatusCode UA_EXPORT
 UA_Server_removeDataSetWriter(UA_Server *server, const UA_NodeId dsw);
 
 #endif /* UA_ENABLE_PUBSUB */
-    
+
 _UA_END_DECLS
 
 #endif /* UA_SERVER_PUBSUB_H */
