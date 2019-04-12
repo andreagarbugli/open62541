@@ -8,11 +8,11 @@
  * (i.e., LDS-ME).
  */
 
-#include <ua_server.h>
-#include <ua_config_default.h>
-#include <ua_types.h>
-#include <ua_log_stdout.h>
-#include <ua_securitypolicies.h>
+#include <open62541/client.h>
+#include <open62541/client_config_default.h>
+#include <open62541/plugin/log_stdout.h>
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
 
 #include <signal.h>
 #include <stdlib.h>
@@ -260,7 +260,7 @@ UA_Client *getRegisterClient(UA_EndpointDescription *endpointRegister, int argc,
 
     return clientRegister;
 #else
-	return NULL;
+    return NULL;
 #endif
 }
 

@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2017 (c) Mark Giraud, Fraunhofer IOSB
@@ -11,17 +11,17 @@
 
 UA_StatusCode
 UA_Client_getEndpoints(UA_Client *client, const char *serverUrl,
-                       size_t* endpointDescriptionsSize,
-                       UA_EndpointDescription** endpointDescriptions) {
+                       size_t *endpointDescriptionsSize,
+                       UA_EndpointDescription **endpointDescriptions) {
     UA_Boolean connected = (client->state > UA_CLIENTSTATE_DISCONNECTED);
     /* Client is already connected to a different server */
-    if(connected && strncmp((const char*)client->config.endpoint.endpointUrl.data, serverUrl,
-                            client->config.endpoint.endpointUrl.length) != 0) {
+    if(connected && strncmp((const char *)client->config.endpoint.endpointUrl.data,
+                            serverUrl, client->config.endpoint.endpointUrl.length) != 0) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
     UA_StatusCode retval;
-    const UA_String url = UA_STRING((char*)(uintptr_t)serverUrl);
+    const UA_String url = UA_STRING((char *)(uintptr_t)serverUrl);
     if(!connected) {
         retval = UA_Client_connectTCPSecureChannel(client, url);
         if(retval != UA_STATUSCODE_GOOD)
@@ -36,20 +36,19 @@ UA_Client_getEndpoints(UA_Client *client, const char *serverUrl,
 }
 
 UA_StatusCode
-UA_Client_findServers(UA_Client *client, const char *serverUrl,
-                      size_t serverUrisSize, UA_String *serverUris,
-                      size_t localeIdsSize, UA_String *localeIds,
+UA_Client_findServers(UA_Client *client, const char *serverUrl, size_t serverUrisSize,
+                      UA_String *serverUris, size_t localeIdsSize, UA_String *localeIds,
                       size_t *registeredServersSize,
                       UA_ApplicationDescription **registeredServers) {
     UA_Boolean connected = (client->state > UA_CLIENTSTATE_DISCONNECTED);
     /* Client is already connected to a different server */
-    if(connected && strncmp((const char*)client->config.endpoint.endpointUrl.data, serverUrl,
-                            client->config.endpoint.endpointUrl.length) != 0) {
+    if(connected && strncmp((const char *)client->config.endpoint.endpointUrl.data,
+                            serverUrl, client->config.endpoint.endpointUrl.length) != 0) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
     UA_StatusCode retval;
-    const UA_String url = UA_STRING((char*)(uintptr_t)serverUrl);
+    const UA_String url = UA_STRING((char *)(uintptr_t)serverUrl);
     if(!connected) {
         retval = UA_Client_connectTCPSecureChannel(client, url);
         if(retval != UA_STATUSCODE_GOOD)
@@ -93,17 +92,19 @@ UA_Client_findServers(UA_Client *client, const char *serverUrl,
 UA_StatusCode
 UA_Client_findServersOnNetwork(UA_Client *client, const char *serverUrl,
                                UA_UInt32 startingRecordId, UA_UInt32 maxRecordsToReturn,
-                               size_t serverCapabilityFilterSize, UA_String *serverCapabilityFilter,
-                               size_t *serverOnNetworkSize, UA_ServerOnNetwork **serverOnNetwork) {
+                               size_t serverCapabilityFilterSize,
+                               UA_String *serverCapabilityFilter,
+                               size_t *serverOnNetworkSize,
+                               UA_ServerOnNetwork **serverOnNetwork) {
     UA_Boolean connected = (client->state > UA_CLIENTSTATE_DISCONNECTED);
     /* Client is already connected to a different server */
-    if(connected && strncmp((const char*)client->config.endpoint.endpointUrl.data, serverUrl,
-                            client->config.endpoint.endpointUrl.length) != 0) {
+    if(connected && strncmp((const char *)client->config.endpoint.endpointUrl.data,
+                            serverUrl, client->config.endpoint.endpointUrl.length) != 0) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
     UA_StatusCode retval;
-    const UA_String url = UA_STRING((char*)(uintptr_t)serverUrl);
+    const UA_String url = UA_STRING((char *)(uintptr_t)serverUrl);
     if(!connected) {
         retval = UA_Client_connectTCPSecureChannel(client, url);
         if(retval != UA_STATUSCODE_GOOD)

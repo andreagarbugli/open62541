@@ -1,18 +1,48 @@
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${PROJECT_SOURCE_DIR}/plugins)
-include_directories(${PROJECT_SOURCE_DIR}/src/server)
-include_directories(${PROJECT_BINARY_DIR})
-include_directories(${PROJECT_SOURCE_DIR}/examples)
-include_directories(${PROJECT_SOURCE_DIR}/arch)
-include_directories(${PROJECT_SOURCE_DIR}/plugins/historydata)
+cmake_minimum_required(VERSION 3.0...3.12)
+project(open62541-examples)
+if(${CMAKE_VERSION} VERSION_LESS 3.12)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
+# This examples folder can also be built standalone.
+# First install open62541 using `make install` then
+# copy this folder to any other location and call CMake directly:
+#
+# cp -r open62541/examples $HOME/open62541_examples
+# cd $HOME/open62541_examples
+# mkdir build && cd build
+# cmake -DUA_NAMESPACE_ZERO=FULL ..
+# make -j
 
-find_package(Threads REQUIRED)
+if(UA_ENABLE_PUBSUB_CUSTOM)
+    find_package(Threads)
+endif()
 
-set(examples_headers
-        ${examples_headers}
-        ${PROJECT_SOURCE_DIR}/examples/common.h
-        )
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    # Examples are built standalone. Find installed open62541
 
+    if(UA_NAMESPACE_ZERO STREQUAL "FULL")
+        find_package(open62541 REQUIRED COMPONENTS FullNamespace)
+    else()
+        find_package(open62541 REQUIRED)
+    endif()
+
+    if(NOT UA_TOOLS_DIR)
+        set(UA_TOOLS_DIR ${open62541_TOOLS_DIR})
+    endif()
+
+    if(NOT UA_NODESET_DIR)
+        set(UA_NODESET_DIR ${open62541_NODESET_DIR})
+    endif()
+
+    function(assign_source_group)
+        # define empty function. We don't need it in standalone
+    endfunction(assign_source_group)
+
+    include_directories(${PROJECT_BINARY_DIR}/src_generated)
+endif()
+
+# Required for common.h header file used in examples
+include_directories(${CMAKE_CURRENT_LIST_DIR})
 
 if(UA_ENABLE_AMALGAMATION)
     add_definitions(-DUA_ENABLE_AMALGAMATION)
@@ -29,15 +59,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}/bin/exampl
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_BINARY_DIR}/bin/examples)
 
 macro(add_example EXAMPLE_NAME EXAMPLE_SOURCE)
-    add_executable(${EXAMPLE_NAME} ${STATIC_OBJECTS} ${EXAMPLE_SOURCE} ${ARGN} ${examples_headers})
-    target_link_libraries(${EXAMPLE_NAME} open62541 ${open62541_LIBRARIES})
-    assign_source_group(${EXAMPLE_SOURCE})
-    add_dependencies(${EXAMPLE_NAME} open62541-object)
-    set_target_properties(${EXAMPLE_NAME} PROPERTIES FOLDER "open62541/examples")
-    set_target_properties(${EXAMPLE_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-    if(UA_COMPILE_AS_CXX)
-        set_source_files_properties(${EXAMPLE_SOURCE} PROPERTIES LANGUAGE CXX)
-    endif()
+  add_executable(${EXAMPLE_NAME} ${STATIC_OBJECTS} ${EXAMPLE_SOURCE} ${ARGN} ${PROJECT_SOURCE_DIR}/common.h)
+  target_link_libraries(${EXAMPLE_NAME} open62541::open62541)
+  assign_source_group(${EXAMPLE_SOURCE})
+  set_target_properties(${EXAMPLE_NAME} PROPERTIES FOLDER "open62541/examples")
+  set_target_properties(${EXAMPLE_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+  if(UA_COMPILE_AS_CXX)
+      set_source_files_properties(${EXAMPLE_SOURCE} PROPERTIES LANGUAGE CXX)
+  endif()
 endmacro()
 
 #############
@@ -126,6 +155,10 @@ if(UA_ENABLE_ENCRYPTION)
     add_example(server_basic128rsa15 encryption/server_basic128rsa15.c)
     add_example(server_basic256sha256 encryption/server_basic256sha256.c)
     add_example(client_encryption encryption/client_encryption.c)
+    # common.h
+    target_include_directories(server_basic128rsa15 PRIVATE "${PROJECT_SOURCE_DIR}/examples")
+    target_include_directories(server_basic256sha256 PRIVATE "${PROJECT_SOURCE_DIR}/examples")
+    target_include_directories(client_encryption PRIVATE "${PROJECT_SOURCE_DIR}/examples")
 endif()
 
 add_example(custom_datatype_client custom_datatype/client_types_custom.c)
@@ -137,14 +170,14 @@ if(UA_ENABLE_NODEMANAGEMENT)
 endif()
 
 if(UA_BUILD_SELFSIGNED_CERTIFICATE)
-    find_package(OpenSSL REQUIRED)
-    add_custom_command(OUTPUT server_cert.der
-            COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/certs/create_self-signed.py ${CMAKE_CURRENT_BINARY_DIR}
-            DEPENDS ${PROJECT_SOURCE_DIR}/tools/certs/create_self-signed.py
-            ${PROJECT_SOURCE_DIR}/tools/certs/localhost.cnf)
-    add_custom_target(selfsigned ALL DEPENDS server_cert.der)
-    add_executable(server_certificate server_certificate.c ${STATIC_OBJECTS} server_cert.der)
-    target_link_libraries(server_certificate open62541 ${open62541_LIBRARIES})
+  find_package(OpenSSL REQUIRED)
+  add_custom_command(OUTPUT server_cert.der
+                     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/certs/create_self-signed.py ${CMAKE_CURRENT_BINARY_DIR}
+                     DEPENDS ${CMAKE_SOURCE_DIR}/tools/certs/create_self-signed.py
+                             ${CMAKE_SOURCE_DIR}/tools/certs/localhost.cnf)
+  add_custom_target(selfsigned ALL DEPENDS server_cert.der)
+  add_executable(server_certificate server_certificate.c ${STATIC_OBJECTS} server_cert.der)
+  target_link_libraries(server_certificate open62541 ${open62541_LIBRARIES})
 endif()
 
 if(UA_ENABLE_DISCOVERY_MULTICAST)

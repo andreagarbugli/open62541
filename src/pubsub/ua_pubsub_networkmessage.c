@@ -5,11 +5,8 @@
  * Copyright (c) 2017 - 2018 Fraunhofer IOSB (Author: Tino Bischoff)
  */
 
-#include "ua_types.h"
-#include "ua_types_encoding_binary.h"
-#include "ua_types_generated.h"
-#include "ua_types_generated_encoding_binary.h"
-#include "ua_types_generated_handling.h"
+#include <open62541/types_generated_encoding_binary.h>
+#include <open62541/types_generated_handling.h>
 
 #ifdef UA_ENABLE_PUBSUB /* conditional compilation */
 
@@ -50,12 +47,15 @@ const UA_Byte DS_MESSAGEHEADER_PICOSECONDS_INCLUDED_MASK = 32;
 const UA_Byte NM_SHIFT_LEN = 2;
 const UA_Byte DS_MH_SHIFT_LEN = 1;
 
-static UA_Boolean UA_NetworkMessage_ExtendedFlags1Enabled(const UA_NetworkMessage* src);
-static UA_Boolean UA_NetworkMessage_ExtendedFlags2Enabled(const UA_NetworkMessage* src);
-static UA_Boolean UA_DataSetMessageHeader_DataSetFlags2Enabled(const UA_DataSetMessageHeader* src);
+static UA_Boolean
+UA_NetworkMessage_ExtendedFlags1Enabled(const UA_NetworkMessage *src);
+static UA_Boolean
+UA_NetworkMessage_ExtendedFlags2Enabled(const UA_NetworkMessage *src);
+static UA_Boolean
+UA_DataSetMessageHeader_DataSetFlags2Enabled(const UA_DataSetMessageHeader *src);
 
 UA_StatusCode
-UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
+UA_NetworkMessage_encodeBinary(const UA_NetworkMessage *src, UA_Byte **bufPos,
                                const UA_Byte *bufEnd) {
     /* UADPVersion + UADP Flags */
     UA_Byte v = src->version;
@@ -99,10 +99,10 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
             return rv;
 
         // ExtendedFlags2
-        if(UA_NetworkMessage_ExtendedFlags2Enabled(src)) { 
+        if(UA_NetworkMessage_ExtendedFlags2Enabled(src)) {
             v = (UA_Byte)src->networkMessageType;
             // shift left 2 bit
-            v = (UA_Byte) (v << NM_SHIFT_LEN);
+            v = (UA_Byte)(v << NM_SHIFT_LEN);
 
             if(src->chunkMessage)
                 v |= NM_CHUNK_MESSAGE_MASK;
@@ -118,32 +118,37 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
 
     // PublisherId
     if(src->publisherIdEnabled) {
-        switch (src->publisherIdType) {
-        case UA_PUBLISHERDATATYPE_BYTE:
-            rv = UA_Byte_encodeBinary(&(src->publisherId.publisherIdByte), bufPos, bufEnd);
-            break;
+        switch(src->publisherIdType) {
+            case UA_PUBLISHERDATATYPE_BYTE:
+                rv = UA_Byte_encodeBinary(&(src->publisherId.publisherIdByte), bufPos,
+                                          bufEnd);
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT16:
-            rv = UA_UInt16_encodeBinary(&(src->publisherId.publisherIdUInt16), bufPos, bufEnd);
-            break;
+            case UA_PUBLISHERDATATYPE_UINT16:
+                rv = UA_UInt16_encodeBinary(&(src->publisherId.publisherIdUInt16), bufPos,
+                                            bufEnd);
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT32:
-            rv = UA_UInt32_encodeBinary(&(src->publisherId.publisherIdUInt32), bufPos, bufEnd);
-            break;
+            case UA_PUBLISHERDATATYPE_UINT32:
+                rv = UA_UInt32_encodeBinary(&(src->publisherId.publisherIdUInt32), bufPos,
+                                            bufEnd);
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT64:
-            rv = UA_UInt64_encodeBinary(&(src->publisherId.publisherIdUInt64), bufPos, bufEnd);
-            break;
+            case UA_PUBLISHERDATATYPE_UINT64:
+                rv = UA_UInt64_encodeBinary(&(src->publisherId.publisherIdUInt64), bufPos,
+                                            bufEnd);
+                break;
 
-        case UA_PUBLISHERDATATYPE_STRING:
-            rv = UA_String_encodeBinary(&(src->publisherId.publisherIdString), bufPos, bufEnd);
-            break;
+            case UA_PUBLISHERDATATYPE_STRING:
+                rv = UA_String_encodeBinary(&(src->publisherId.publisherIdString), bufPos,
+                                            bufEnd);
+                break;
 
-        default:
-            rv = UA_STATUSCODE_BADINTERNALERROR;
-            break;
+            default:
+                rv = UA_STATUSCODE_BADINTERNALERROR;
+                break;
         }
-    
+
         if(rv != UA_STATUSCODE_GOOD)
             return rv;
     }
@@ -176,25 +181,28 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
             return rv;
 
         if(src->groupHeader.writerGroupIdEnabled) {
-            rv = UA_UInt16_encodeBinary(&(src->groupHeader.writerGroupId), bufPos, bufEnd);
+            rv =
+                UA_UInt16_encodeBinary(&(src->groupHeader.writerGroupId), bufPos, bufEnd);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
 
-        if(src->groupHeader.groupVersionEnabled) { 
+        if(src->groupHeader.groupVersionEnabled) {
             rv = UA_UInt32_encodeBinary(&(src->groupHeader.groupVersion), bufPos, bufEnd);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
 
         if(src->groupHeader.networkMessageNumberEnabled) {
-            rv = UA_UInt16_encodeBinary(&(src->groupHeader.networkMessageNumber), bufPos, bufEnd);
+            rv = UA_UInt16_encodeBinary(&(src->groupHeader.networkMessageNumber), bufPos,
+                                        bufEnd);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
 
         if(src->groupHeader.sequenceNumberEnabled) {
-            rv = UA_UInt16_encodeBinary(&(src->groupHeader.sequenceNumber), bufPos, bufEnd);
+            rv = UA_UInt16_encodeBinary(&(src->groupHeader.sequenceNumber), bufPos,
+                                        bufEnd);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
@@ -204,15 +212,17 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
     if(src->payloadHeaderEnabled) {
         if(src->networkMessageType != UA_NETWORKMESSAGE_DATASET)
             return UA_STATUSCODE_BADNOTIMPLEMENTED;
-            
-        rv = UA_Byte_encodeBinary(&(src->payloadHeader.dataSetPayloadHeader.count), bufPos, bufEnd);
+
+        rv = UA_Byte_encodeBinary(&(src->payloadHeader.dataSetPayloadHeader.count),
+                                  bufPos, bufEnd);
 
         if(src->payloadHeader.dataSetPayloadHeader.dataSetWriterIds == NULL)
             return UA_STATUSCODE_BADENCODINGERROR;
-            
+
         for(UA_Byte i = 0; i < src->payloadHeader.dataSetPayloadHeader.count; i++) {
-            rv = UA_UInt16_encodeBinary(&(src->payloadHeader.dataSetPayloadHeader.dataSetWriterIds[i]),
-                                        bufPos, bufEnd);
+            rv = UA_UInt16_encodeBinary(
+                &(src->payloadHeader.dataSetPayloadHeader.dataSetWriterIds[i]), bufPos,
+                bufEnd);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
@@ -231,10 +241,11 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
         /* Size (calculate & encode) */
         UA_UInt16 pfSize = 0;
         for(UA_UInt16 i = 0; i < src->promotedFieldsSize; i++)
-            pfSize = (UA_UInt16) (pfSize + UA_Variant_calcSizeBinary(&src->promotedFields[i]));
+            pfSize =
+                (UA_UInt16)(pfSize + UA_Variant_calcSizeBinary(&src->promotedFields[i]));
         rv |= UA_UInt16_encodeBinary(&pfSize, bufPos, bufEnd);
 
-        for (UA_UInt16 i = 0; i < src->promotedFieldsSize; i++)
+        for(UA_UInt16 i = 0; i < src->promotedFieldsSize; i++)
             rv |= UA_Variant_encodeBinary(&(src->promotedFields[i]), bufPos, bufEnd);
     }
 
@@ -269,15 +280,17 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
             return rv;
 
         // MessageNonce
-        for (UA_Byte i = 0; i < src->securityHeader.nonceLength; i++) {
-            rv = UA_Byte_encodeBinary(&(src->securityHeader.messageNonce.data[i]), bufPos, bufEnd);
+        for(UA_Byte i = 0; i < src->securityHeader.nonceLength; i++) {
+            rv = UA_Byte_encodeBinary(&(src->securityHeader.messageNonce.data[i]), bufPos,
+                                      bufEnd);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
 
         // SecurityFooterSize
         if(src->securityHeader.securityFooterEnabled) {
-            rv = UA_UInt16_encodeBinary(&src->securityHeader.securityFooterSize, bufPos, bufEnd);
+            rv = UA_UInt16_encodeBinary(&src->securityHeader.securityFooterSize, bufPos,
+                                        bufEnd);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
@@ -286,20 +299,21 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
     // Payload
     if(src->networkMessageType != UA_NETWORKMESSAGE_DATASET)
         return UA_STATUSCODE_BADNOTIMPLEMENTED;
-        
+
     UA_Byte count = 1;
 
     if(src->payloadHeaderEnabled) {
         count = src->payloadHeader.dataSetPayloadHeader.count;
         if(count > 1) {
-            for (UA_Byte i = 0; i < count; i++) {
+            for(UA_Byte i = 0; i < count; i++) {
                 // initially calculate the size, if not specified
                 UA_UInt16 sz = 0;
                 if((src->payload.dataSetPayload.sizes != NULL) &&
                    (src->payload.dataSetPayload.sizes[i] != 0)) {
                     sz = src->payload.dataSetPayload.sizes[i];
                 } else {
-                    sz = (UA_UInt16)UA_DataSetMessage_calcSizeBinary(&src->payload.dataSetPayload.dataSetMessages[i]);
+                    sz = (UA_UInt16)UA_DataSetMessage_calcSizeBinary(
+                        &src->payload.dataSetPayload.dataSetMessages[i]);
                 }
 
                 rv = UA_UInt16_encodeBinary(&sz, bufPos, bufEnd);
@@ -310,7 +324,8 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
     }
 
     for(UA_Byte i = 0; i < count; i++) {
-        rv = UA_DataSetMessage_encodeBinary(&(src->payload.dataSetPayload.dataSetMessages[i]), bufPos, bufEnd);
+        rv = UA_DataSetMessage_encodeBinary(
+            &(src->payload.dataSetPayload.dataSetMessages[i]), bufPos, bufEnd);
         if(rv != UA_STATUSCODE_GOOD)
             return rv;
     }
@@ -338,7 +353,7 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src, UA_Byte **bufPos,
 
 static UA_StatusCode
 UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
-                                       UA_NetworkMessage* dst) {
+                                       UA_NetworkMessage *dst) {
     memset(dst, 0, sizeof(UA_NetworkMessage));
     UA_Byte v = 0;
     UA_StatusCode rv = UA_Byte_decodeBinary(src, offset, &v);
@@ -346,7 +361,7 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
         return rv;
 
     dst->version = v & NM_VERSION_MASK;
-    
+
     if((v & NM_PUBLISHER_ID_ENABLED_MASK) != 0)
         dst->publisherIdEnabled = true;
 
@@ -355,7 +370,7 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
 
     if((v & NM_PAYLOAD_HEADER_ENABLED_MASK) != 0)
         dst->payloadHeaderEnabled = true;
-    
+
     if((v & NM_EXTENDEDFLAGS1_ENABLED_MASK) != 0) {
         v = 0;
         rv = UA_Byte_decodeBinary(src, offset, &v);
@@ -388,36 +403,41 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
                 dst->promotedFieldsEnabled = true;
 
             v = v & NM_NETWORK_MSG_TYPE_MASK;
-            v = (UA_Byte) (v >> NM_SHIFT_LEN);
+            v = (UA_Byte)(v >> NM_SHIFT_LEN);
             dst->networkMessageType = (UA_NetworkMessageType)v;
         }
     }
 
     if(dst->publisherIdEnabled) {
-        switch (dst->publisherIdType) {
-        case UA_PUBLISHERDATATYPE_BYTE:
-            rv = UA_Byte_decodeBinary(src, offset, &(dst->publisherId.publisherIdByte));
-            break;
+        switch(dst->publisherIdType) {
+            case UA_PUBLISHERDATATYPE_BYTE:
+                rv = UA_Byte_decodeBinary(src, offset,
+                                          &(dst->publisherId.publisherIdByte));
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT16:
-            rv = UA_UInt16_decodeBinary(src, offset, &(dst->publisherId.publisherIdUInt16));
-            break;
+            case UA_PUBLISHERDATATYPE_UINT16:
+                rv = UA_UInt16_decodeBinary(src, offset,
+                                            &(dst->publisherId.publisherIdUInt16));
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT32:
-            rv = UA_UInt32_decodeBinary(src, offset, &(dst->publisherId.publisherIdUInt32));
-            break;
+            case UA_PUBLISHERDATATYPE_UINT32:
+                rv = UA_UInt32_decodeBinary(src, offset,
+                                            &(dst->publisherId.publisherIdUInt32));
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT64:
-            rv = UA_UInt64_decodeBinary(src, offset, &(dst->publisherId.publisherIdUInt64));
-            break;
+            case UA_PUBLISHERDATATYPE_UINT64:
+                rv = UA_UInt64_decodeBinary(src, offset,
+                                            &(dst->publisherId.publisherIdUInt64));
+                break;
 
-        case UA_PUBLISHERDATATYPE_STRING:
-            rv = UA_String_decodeBinary(src, offset, &(dst->publisherId.publisherIdString));
-            break;
+            case UA_PUBLISHERDATATYPE_STRING:
+                rv = UA_String_decodeBinary(src, offset,
+                                            &(dst->publisherId.publisherIdString));
+                break;
 
-        default:
-            rv = UA_STATUSCODE_BADINTERNALERROR;
-            break;
+            default:
+                rv = UA_STATUSCODE_BADINTERNALERROR;
+                break;
         }
 
         if(rv != UA_STATUSCODE_GOOD)
@@ -431,7 +451,7 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
     }
 
     // GroupHeader
-    if(dst->groupHeaderEnabled) { 
+    if(dst->groupHeaderEnabled) {
         v = 0;
         rv = UA_Byte_decodeBinary(src, offset, &v);
         if(rv != UA_STATUSCODE_GOOD)
@@ -462,7 +482,8 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
         }
 
         if(dst->groupHeader.networkMessageNumberEnabled) {
-            rv = UA_UInt16_decodeBinary(src, offset, &dst->groupHeader.networkMessageNumber);
+            rv = UA_UInt16_decodeBinary(src, offset,
+                                        &dst->groupHeader.networkMessageNumber);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
@@ -479,16 +500,18 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
         if(dst->networkMessageType != UA_NETWORKMESSAGE_DATASET)
             return UA_STATUSCODE_BADNOTIMPLEMENTED;
 
-        rv = UA_Byte_decodeBinary(src, offset, &dst->payloadHeader.dataSetPayloadHeader.count);
+        rv = UA_Byte_decodeBinary(src, offset,
+                                  &dst->payloadHeader.dataSetPayloadHeader.count);
         if(rv != UA_STATUSCODE_GOOD)
             return rv;
 
         dst->payloadHeader.dataSetPayloadHeader.dataSetWriterIds =
             (UA_UInt16 *)UA_Array_new(dst->payloadHeader.dataSetPayloadHeader.count,
                                       &UA_TYPES[UA_TYPES_UINT16]);
-        for (UA_Byte i = 0; i < dst->payloadHeader.dataSetPayloadHeader.count; i++) {
-            rv = UA_UInt16_decodeBinary(src, offset,
-                                        &dst->payloadHeader.dataSetPayloadHeader.dataSetWriterIds[i]);
+        for(UA_Byte i = 0; i < dst->payloadHeader.dataSetPayloadHeader.count; i++) {
+            rv = UA_UInt16_decodeBinary(
+                src, offset,
+                &dst->payloadHeader.dataSetPayloadHeader.dataSetWriterIds[i]);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
@@ -508,7 +531,7 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
             return rv;
     }
 
-    // PromotedFields 
+    // PromotedFields
     if(dst->promotedFieldsEnabled) {
         // Size
         UA_UInt16 promotedFieldsSize = 0;
@@ -518,21 +541,22 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
 
         // promotedFieldsSize: here size in Byte, not the number of objects!
         if(promotedFieldsSize > 0) {
-            // store offset, later compared with promotedFieldsSize 
+            // store offset, later compared with promotedFieldsSize
             size_t offsetEnd = (*offset) + promotedFieldsSize;
 
             unsigned int counter = 0;
             do {
                 if(counter == 0) {
-                    dst->promotedFields = (UA_Variant*)UA_malloc(UA_TYPES[UA_TYPES_VARIANT].memSize);
+                    dst->promotedFields =
+                        (UA_Variant *)UA_malloc(UA_TYPES[UA_TYPES_VARIANT].memSize);
                     // set promotedFieldsSize to the number of objects
-                    dst->promotedFieldsSize = (UA_UInt16) (counter + 1);
+                    dst->promotedFieldsSize = (UA_UInt16)(counter + 1);
                 } else {
-                    dst->promotedFields = (UA_Variant*)
-                        UA_realloc(dst->promotedFields,
-                                   UA_TYPES[UA_TYPES_VARIANT].memSize * (counter + 1));
+                    dst->promotedFields = (UA_Variant *)UA_realloc(
+                        dst->promotedFields,
+                        UA_TYPES[UA_TYPES_VARIANT].memSize * (counter + 1));
                     // set promotedFieldsSize to the number of objects
-                    dst->promotedFieldsSize = (UA_UInt16) (counter + 1);
+                    dst->promotedFieldsSize = (UA_UInt16)(counter + 1);
                 }
 
                 UA_Variant_init(&dst->promotedFields[counter]);
@@ -540,7 +564,7 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
                 counter++;
-            } while ((*offset) < offsetEnd);
+            } while((*offset) < offsetEnd);
         }
     }
 
@@ -581,8 +605,9 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
 
-            for (UA_Byte i = 0; i < dst->securityHeader.nonceLength; i++) {
-                rv = UA_Byte_decodeBinary(src, offset, &(dst->securityHeader.messageNonce.data[i]));
+            for(UA_Byte i = 0; i < dst->securityHeader.nonceLength; i++) {
+                rv = UA_Byte_decodeBinary(src, offset,
+                                          &(dst->securityHeader.messageNonce.data[i]));
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
             }
@@ -590,7 +615,8 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
 
         // SecurityFooterSize
         if(dst->securityHeader.securityFooterEnabled) {
-            rv = UA_UInt16_decodeBinary(src, offset, &dst->securityHeader.securityFooterSize);
+            rv = UA_UInt16_decodeBinary(src, offset,
+                                        &dst->securityHeader.securityFooterSize);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
@@ -604,19 +630,22 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
     if(dst->payloadHeaderEnabled) {
         count = dst->payloadHeader.dataSetPayloadHeader.count;
         if(count > 1) {
-            dst->payload.dataSetPayload.sizes = (UA_UInt16 *)UA_Array_new(count, &UA_TYPES[UA_TYPES_UINT16]);
-            for (UA_Byte i = 0; i < count; i++) {
-                rv = UA_UInt16_decodeBinary(src, offset, &(dst->payload.dataSetPayload.sizes[i]));
+            dst->payload.dataSetPayload.sizes =
+                (UA_UInt16 *)UA_Array_new(count, &UA_TYPES[UA_TYPES_UINT16]);
+            for(UA_Byte i = 0; i < count; i++) {
+                rv = UA_UInt16_decodeBinary(src, offset,
+                                            &(dst->payload.dataSetPayload.sizes[i]));
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
             }
         }
     }
 
-    dst->payload.dataSetPayload.dataSetMessages = (UA_DataSetMessage*)
-        UA_calloc(count, sizeof(UA_DataSetMessage));
+    dst->payload.dataSetPayload.dataSetMessages =
+        (UA_DataSetMessage *)UA_calloc(count, sizeof(UA_DataSetMessage));
     for(UA_Byte i = 0; i < count; i++) {
-        rv = UA_DataSetMessage_decodeBinary(src, offset, &(dst->payload.dataSetPayload.dataSetMessages[i]));
+        rv = UA_DataSetMessage_decodeBinary(
+            src, offset, &(dst->payload.dataSetPayload.dataSetMessages[i]));
         if(rv != UA_STATUSCODE_GOOD)
             return rv;
     }
@@ -626,14 +655,16 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
 
     if(dst->securityEnabled) {
         // SecurityFooter
-        if(dst->securityHeader.securityFooterEnabled && (dst->securityHeader.securityFooterSize > 0)) {
-            rv = UA_ByteString_allocBuffer(&dst->securityFooter, dst->securityHeader.securityFooterSize);
-            if (rv != UA_STATUSCODE_GOOD)
+        if(dst->securityHeader.securityFooterEnabled &&
+           (dst->securityHeader.securityFooterSize > 0)) {
+            rv = UA_ByteString_allocBuffer(&dst->securityFooter,
+                                           dst->securityHeader.securityFooterSize);
+            if(rv != UA_STATUSCODE_GOOD)
                 return rv;
 
-            for (UA_Byte i = 0; i < dst->securityHeader.securityFooterSize; i++) {
+            for(UA_Byte i = 0; i < dst->securityHeader.securityFooterSize; i++) {
                 rv = UA_Byte_decodeBinary(src, offset, &(dst->securityFooter.data[i]));
-                if (rv != UA_STATUSCODE_GOOD)
+                if(rv != UA_STATUSCODE_GOOD)
                     return rv;
             }
         }
@@ -641,7 +672,7 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
         // Signature
         if(dst->securityHeader.networkMessageSigned) {
             rv = UA_ByteString_decodeBinary(src, offset, &(dst->signature));
-            if (rv != UA_STATUSCODE_GOOD)
+            if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
     }
@@ -650,7 +681,8 @@ UA_NetworkMessage_decodeBinaryInternal(const UA_ByteString *src, size_t *offset,
 }
 
 UA_StatusCode
-UA_NetworkMessage_decodeBinary(const UA_ByteString *src, size_t *offset, UA_NetworkMessage* dst) {
+UA_NetworkMessage_decodeBinary(const UA_ByteString *src, size_t *offset,
+                               UA_NetworkMessage *dst) {
     UA_StatusCode retval = UA_NetworkMessage_decodeBinaryInternal(src, offset, dst);
 
     if(retval != UA_STATUSCODE_GOOD)
@@ -659,10 +691,11 @@ UA_NetworkMessage_decodeBinary(const UA_ByteString *src, size_t *offset, UA_Netw
     return retval;
 }
 
-size_t UA_NetworkMessage_calcSizeBinary(const UA_NetworkMessage* p) {
+size_t
+UA_NetworkMessage_calcSizeBinary(const UA_NetworkMessage *p) {
     size_t retval = 0;
     UA_Byte byte;
-    size_t size = UA_Byte_calcSizeBinary(&byte); // UADPVersion + UADPFlags
+    size_t size = UA_Byte_calcSizeBinary(&byte);  // UADPVersion + UADPFlags
     if(UA_NetworkMessage_ExtendedFlags1Enabled(p)) {
         size += UA_Byte_calcSizeBinary(&byte);
         if(UA_NetworkMessage_ExtendedFlags2Enabled(p))
@@ -670,33 +703,33 @@ size_t UA_NetworkMessage_calcSizeBinary(const UA_NetworkMessage* p) {
     }
 
     if(p->publisherIdEnabled) {
-        switch (p->publisherIdType) {
-        case UA_PUBLISHERDATATYPE_BYTE:
-            size += UA_Byte_calcSizeBinary(&p->publisherId.publisherIdByte);
-            break;
+        switch(p->publisherIdType) {
+            case UA_PUBLISHERDATATYPE_BYTE:
+                size += UA_Byte_calcSizeBinary(&p->publisherId.publisherIdByte);
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT16:
-            size += UA_UInt16_calcSizeBinary(&p->publisherId.publisherIdUInt16);
-            break;
+            case UA_PUBLISHERDATATYPE_UINT16:
+                size += UA_UInt16_calcSizeBinary(&p->publisherId.publisherIdUInt16);
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT32:
-            size += UA_UInt32_calcSizeBinary(&p->publisherId.publisherIdUInt32);
-            break;
+            case UA_PUBLISHERDATATYPE_UINT32:
+                size += UA_UInt32_calcSizeBinary(&p->publisherId.publisherIdUInt32);
+                break;
 
-        case UA_PUBLISHERDATATYPE_UINT64:
-            size += UA_UInt64_calcSizeBinary(&p->publisherId.publisherIdUInt64);
-            break;
+            case UA_PUBLISHERDATATYPE_UINT64:
+                size += UA_UInt64_calcSizeBinary(&p->publisherId.publisherIdUInt64);
+                break;
 
-        case UA_PUBLISHERDATATYPE_STRING:
-            size += UA_String_calcSizeBinary(&p->publisherId.publisherIdString);
-            break;
+            case UA_PUBLISHERDATATYPE_STRING:
+                size += UA_String_calcSizeBinary(&p->publisherId.publisherIdString);
+                break;
         }
     }
 
     if(p->dataSetClassIdEnabled)
         size += UA_Guid_calcSizeBinary(&p->dataSetClassId);
 
-    // Group Header 
+    // Group Header
     if(p->groupHeaderEnabled) {
         size += UA_Byte_calcSizeBinary(&byte);
 
@@ -718,8 +751,9 @@ size_t UA_NetworkMessage_calcSizeBinary(const UA_NetworkMessage* p) {
         if(p->networkMessageType == UA_NETWORKMESSAGE_DATASET) {
             size += UA_Byte_calcSizeBinary(&p->payloadHeader.dataSetPayloadHeader.count);
             if(p->payloadHeader.dataSetPayloadHeader.dataSetWriterIds != NULL) {
-                size += UA_UInt16_calcSizeBinary(&p->payloadHeader.dataSetPayloadHeader.dataSetWriterIds[0]) *
-                    p->payloadHeader.dataSetPayloadHeader.count;
+                size += UA_UInt16_calcSizeBinary(
+                            &p->payloadHeader.dataSetPayloadHeader.dataSetWriterIds[0]) *
+                        p->payloadHeader.dataSetPayloadHeader.count;
             } else {
                 return 0; /* no dataSetWriterIds given! */
             }
@@ -734,9 +768,9 @@ size_t UA_NetworkMessage_calcSizeBinary(const UA_NetworkMessage* p) {
     if(p->picosecondsEnabled)
         size += UA_UInt16_calcSizeBinary(&p->picoseconds);
 
-    if(p->promotedFieldsEnabled) { 
+    if(p->promotedFieldsEnabled) {
         size += UA_UInt16_calcSizeBinary(&p->promotedFieldsSize);
-        for (UA_UInt16 i = 0; i < p->promotedFieldsSize; i++)
+        for(UA_UInt16 i = 0; i < p->promotedFieldsSize; i++)
             size += UA_Variant_calcSizeBinary(&p->promotedFields[i]);
     }
 
@@ -745,28 +779,31 @@ size_t UA_NetworkMessage_calcSizeBinary(const UA_NetworkMessage* p) {
         size += UA_UInt32_calcSizeBinary(&p->securityHeader.securityTokenId);
         size += UA_Byte_calcSizeBinary(&p->securityHeader.nonceLength);
         if(p->securityHeader.nonceLength > 0)
-            size += (UA_Byte_calcSizeBinary(&p->securityHeader.messageNonce.data[0]) * p->securityHeader.nonceLength);
+            size += (UA_Byte_calcSizeBinary(&p->securityHeader.messageNonce.data[0]) *
+                     p->securityHeader.nonceLength);
         if(p->securityHeader.securityFooterEnabled)
             size += UA_UInt16_calcSizeBinary(&p->securityHeader.securityFooterSize);
     }
-    
+
     if(p->networkMessageType == UA_NETWORKMESSAGE_DATASET) {
         UA_Byte count = 1;
         if(p->payloadHeaderEnabled) {
             count = p->payloadHeader.dataSetPayloadHeader.count;
             if(count > 1)
-                size += UA_UInt16_calcSizeBinary(&(p->payload.dataSetPayload.sizes[0])) * count;
+                size += UA_UInt16_calcSizeBinary(&(p->payload.dataSetPayload.sizes[0])) *
+                        count;
         }
 
-        for (size_t i = 0; i < count; i++)
-            size += UA_DataSetMessage_calcSizeBinary(&(p->payload.dataSetPayload.dataSetMessages[i]));
+        for(size_t i = 0; i < count; i++)
+            size += UA_DataSetMessage_calcSizeBinary(
+                &(p->payload.dataSetPayload.dataSetMessages[i]));
     }
 
-    if (p->securityEnabled) {
-        if (p->securityHeader.securityFooterEnabled)
+    if(p->securityEnabled) {
+        if(p->securityHeader.securityFooterEnabled)
             size += p->securityHeader.securityFooterSize;
 
-        if (p->securityHeader.networkMessageSigned)
+        if(p->securityHeader.networkMessageSigned)
             size += UA_ByteString_calcSizeBinary(&p->signature);
     }
 
@@ -775,9 +812,10 @@ size_t UA_NetworkMessage_calcSizeBinary(const UA_NetworkMessage* p) {
 }
 
 void
-UA_NetworkMessage_deleteMembers(UA_NetworkMessage* p) {
+UA_NetworkMessage_deleteMembers(UA_NetworkMessage *p) {
     if(p->promotedFieldsEnabled)
-        UA_Array_delete(p->promotedFields, p->promotedFieldsSize, &UA_TYPES[UA_TYPES_VARIANT]);
+        UA_Array_delete(p->promotedFields, p->promotedFieldsSize,
+                        &UA_TYPES[UA_TYPES_VARIANT]);
 
     if(p->securityEnabled && (p->securityHeader.nonceLength > 0))
         UA_ByteString_deleteMembers(&p->securityHeader.messageNonce);
@@ -786,12 +824,14 @@ UA_NetworkMessage_deleteMembers(UA_NetworkMessage* p) {
         if(p->payloadHeaderEnabled) {
             if(p->payloadHeader.dataSetPayloadHeader.dataSetWriterIds != NULL) {
                 UA_Array_delete(p->payloadHeader.dataSetPayloadHeader.dataSetWriterIds,
-                                p->payloadHeader.dataSetPayloadHeader.count, &UA_TYPES[UA_TYPES_UINT16]);
+                                p->payloadHeader.dataSetPayloadHeader.count,
+                                &UA_TYPES[UA_TYPES_UINT16]);
             }
 
-            if(p->payload.dataSetPayload.sizes != NULL) { 
+            if(p->payload.dataSetPayload.sizes != NULL) {
                 UA_Array_delete(p->payload.dataSetPayload.sizes,
-                                p->payloadHeader.dataSetPayloadHeader.count, &UA_TYPES[UA_TYPES_UINT16]);
+                                p->payloadHeader.dataSetPayloadHeader.count,
+                                &UA_TYPES[UA_TYPES_UINT16]);
             }
         }
 
@@ -799,43 +839,41 @@ UA_NetworkMessage_deleteMembers(UA_NetworkMessage* p) {
             UA_Byte count = 1;
             if(p->payloadHeaderEnabled)
                 count = p->payloadHeader.dataSetPayloadHeader.count;
-            
-            for (size_t i = 0; i < count; i++)
+
+            for(size_t i = 0; i < count; i++)
                 UA_DataSetMessage_free(&(p->payload.dataSetPayload.dataSetMessages[i]));
 
             UA_free(p->payload.dataSetPayload.dataSetMessages);
         }
     }
 
-    if(p->securityHeader.securityFooterEnabled && (p->securityHeader.securityFooterSize > 0))
+    if(p->securityHeader.securityFooterEnabled &&
+       (p->securityHeader.securityFooterSize > 0))
         UA_ByteString_deleteMembers(&p->securityFooter);
 
-    if(p->messageIdEnabled){
-           UA_String_deleteMembers(&p->messageId);
+    if(p->messageIdEnabled) {
+        UA_String_deleteMembers(&p->messageId);
     }
 
-    if(p->publisherIdEnabled && p->publisherIdType == UA_PUBLISHERDATATYPE_STRING){
-       UA_String_deleteMembers(&p->publisherId.publisherIdString);
+    if(p->publisherIdEnabled && p->publisherIdType == UA_PUBLISHERDATATYPE_STRING) {
+        UA_String_deleteMembers(&p->publisherId.publisherIdString);
     }
 
     memset(p, 0, sizeof(UA_NetworkMessage));
 }
 
-void UA_NetworkMessage_delete(UA_NetworkMessage* p) {
+void
+UA_NetworkMessage_delete(UA_NetworkMessage *p) {
     UA_NetworkMessage_deleteMembers(p);
 }
 
 UA_Boolean
-UA_NetworkMessage_ExtendedFlags1Enabled(const UA_NetworkMessage* src) {
+UA_NetworkMessage_ExtendedFlags1Enabled(const UA_NetworkMessage *src) {
     UA_Boolean retval = false;
 
-    if((src->publisherIdType != UA_PUBLISHERDATATYPE_BYTE) 
-        || src->dataSetClassIdEnabled 
-        || src->securityEnabled 
-        || src->timestampEnabled 
-        || src->picosecondsEnabled
-        || UA_NetworkMessage_ExtendedFlags2Enabled(src))
-    {
+    if((src->publisherIdType != UA_PUBLISHERDATATYPE_BYTE) ||
+       src->dataSetClassIdEnabled || src->securityEnabled || src->timestampEnabled ||
+       src->picosecondsEnabled || UA_NetworkMessage_ExtendedFlags2Enabled(src)) {
         retval = true;
     }
 
@@ -843,7 +881,7 @@ UA_NetworkMessage_ExtendedFlags1Enabled(const UA_NetworkMessage* src) {
 }
 
 UA_Boolean
-UA_NetworkMessage_ExtendedFlags2Enabled(const UA_NetworkMessage* src) {
+UA_NetworkMessage_ExtendedFlags2Enabled(const UA_NetworkMessage *src) {
     if(src->chunkMessage || src->promotedFieldsEnabled ||
        src->networkMessageType != UA_NETWORKMESSAGE_DATASET)
         return true;
@@ -851,7 +889,7 @@ UA_NetworkMessage_ExtendedFlags2Enabled(const UA_NetworkMessage* src) {
 }
 
 UA_Boolean
-UA_DataSetMessageHeader_DataSetFlags2Enabled(const UA_DataSetMessageHeader* src) {
+UA_DataSetMessageHeader_DataSetFlags2Enabled(const UA_DataSetMessageHeader *src) {
     if(src->dataSetMessageType != UA_DATASETMESSAGE_DATAKEYFRAME ||
        src->timestampEnabled || src->picoSecondsIncluded)
         return true;
@@ -859,12 +897,10 @@ UA_DataSetMessageHeader_DataSetFlags2Enabled(const UA_DataSetMessageHeader* src)
 }
 
 UA_StatusCode
-UA_DataSetMessageHeader_encodeBinary(const UA_DataSetMessageHeader* src, UA_Byte **bufPos,
+UA_DataSetMessageHeader_encodeBinary(const UA_DataSetMessageHeader *src, UA_Byte **bufPos,
                                      const UA_Byte *bufEnd) {
-    UA_StatusCode retval = UA_STATUSCODE_BADNOTIMPLEMENTED;
-
     UA_Byte v;
-    // DataSetFlags1 
+    // DataSetFlags1
     v = (UA_Byte)src->fieldEncoding;
     // shift left 1 bit
     v = (UA_Byte)(v << DS_MH_SHIFT_LEN);
@@ -890,7 +926,7 @@ UA_DataSetMessageHeader_encodeBinary(const UA_DataSetMessageHeader* src, UA_Byte
     UA_StatusCode rv = UA_Byte_encodeBinary(&v, bufPos, bufEnd);
     if(rv != UA_STATUSCODE_GOOD)
         return rv;
-    
+
     // DataSetFlags2
     if(UA_DataSetMessageHeader_DataSetFlags2Enabled(src)) {
         v = (UA_Byte)src->dataSetMessageType;
@@ -907,7 +943,7 @@ UA_DataSetMessageHeader_encodeBinary(const UA_DataSetMessageHeader* src, UA_Byte
     }
 
     // DataSetMessageSequenceNr
-    if(src->dataSetMessageSequenceNrEnabled) { 
+    if(src->dataSetMessageSequenceNrEnabled) {
         rv = UA_UInt16_encodeBinary(&src->dataSetMessageSequenceNr, bufPos, bufEnd);
         if(rv != UA_STATUSCODE_GOOD)
             return rv;
@@ -948,15 +984,12 @@ UA_DataSetMessageHeader_encodeBinary(const UA_DataSetMessageHeader* src, UA_Byte
             return rv;
     }
 
-    retval = UA_STATUSCODE_GOOD;
-    return retval;
+    return UA_STATUSCODE_GOOD;
 }
 
 UA_StatusCode
 UA_DataSetMessageHeader_decodeBinary(const UA_ByteString *src, size_t *offset,
-                                     UA_DataSetMessageHeader* dst) {
-    UA_StatusCode retval = UA_STATUSCODE_BADNOTIMPLEMENTED;
-
+                                     UA_DataSetMessageHeader *dst) {
     memset(dst, 0, sizeof(UA_DataSetMessageHeader));
     UA_Byte v = 0;
     UA_StatusCode rv = UA_Byte_decodeBinary(src, offset, &v);
@@ -966,7 +999,7 @@ UA_DataSetMessageHeader_decodeBinary(const UA_ByteString *src, size_t *offset,
     UA_Byte v2 = v & DS_MESSAGEHEADER_FIELD_ENCODING_MASK;
     v2 = (UA_Byte)(v2 >> DS_MH_SHIFT_LEN);
     dst->fieldEncoding = (UA_FieldEncoding)v2;
-    
+
     if((v & DS_MESSAGEHEADER_DS_MSG_VALID) != 0)
         dst->dataSetMessageValid = true;
 
@@ -987,8 +1020,9 @@ UA_DataSetMessageHeader_decodeBinary(const UA_ByteString *src, size_t *offset,
         rv = UA_Byte_decodeBinary(src, offset, &v);
         if(rv != UA_STATUSCODE_GOOD)
             return rv;
-        
-        dst->dataSetMessageType = (UA_DataSetMessageType)(v & DS_MESSAGEHEADER_DS_MESSAGE_TYPE_MASK);
+
+        dst->dataSetMessageType =
+            (UA_DataSetMessageType)(v & DS_MESSAGEHEADER_DS_MESSAGE_TYPE_MASK);
 
         if((v & DS_MESSAGEHEADER_TIMESTAMP_ENABLED_MASK) != 0)
             dst->timestampEnabled = true;
@@ -1048,14 +1082,13 @@ UA_DataSetMessageHeader_decodeBinary(const UA_ByteString *src, size_t *offset,
         dst->configVersionMinorVersion = 0;
     }
 
-    retval = UA_STATUSCODE_GOOD;
-    return retval;
+    return UA_STATUSCODE_GOOD;
 }
 
 size_t
-UA_DataSetMessageHeader_calcSizeBinary(const UA_DataSetMessageHeader* p) {
+UA_DataSetMessageHeader_calcSizeBinary(const UA_DataSetMessageHeader *p) {
     UA_Byte byte;
-    size_t size = UA_Byte_calcSizeBinary(&byte); // DataSetMessage Type + Flags
+    size_t size = UA_Byte_calcSizeBinary(&byte);  // DataSetMessage Type + Flags
     if(UA_DataSetMessageHeader_DataSetFlags2Enabled(p))
         size += UA_Byte_calcSizeBinary(&byte);
 
@@ -1081,7 +1114,7 @@ UA_DataSetMessageHeader_calcSizeBinary(const UA_DataSetMessageHeader* p) {
 }
 
 UA_StatusCode
-UA_DataSetMessage_encodeBinary(const UA_DataSetMessage* src, UA_Byte **bufPos,
+UA_DataSetMessage_encodeBinary(const UA_DataSetMessage *src, UA_Byte **bufPos,
                                const UA_Byte *bufEnd) {
     UA_StatusCode rv = UA_DataSetMessageHeader_encodeBinary(&src->header, bufPos, bufEnd);
     if(rv != UA_STATUSCODE_GOOD)
@@ -1089,22 +1122,25 @@ UA_DataSetMessage_encodeBinary(const UA_DataSetMessage* src, UA_Byte **bufPos,
 
     if(src->header.dataSetMessageType == UA_DATASETMESSAGE_DATAKEYFRAME) {
         if(src->header.fieldEncoding != UA_FIELDENCODING_RAWDATA) {
-            rv = UA_UInt16_encodeBinary(&(src->data.keyFrameData.fieldCount), bufPos, bufEnd);
+            rv = UA_UInt16_encodeBinary(&(src->data.keyFrameData.fieldCount), bufPos,
+                                        bufEnd);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
         }
 
         if(src->header.fieldEncoding == UA_FIELDENCODING_VARIANT) {
-            for (UA_UInt16 i = 0; i < src->data.keyFrameData.fieldCount; i++) {
-                rv = UA_Variant_encodeBinary(&(src->data.keyFrameData.dataSetFields[i].value), bufPos, bufEnd);
+            for(UA_UInt16 i = 0; i < src->data.keyFrameData.fieldCount; i++) {
+                rv = UA_Variant_encodeBinary(
+                    &(src->data.keyFrameData.dataSetFields[i].value), bufPos, bufEnd);
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
             }
         } else if(src->header.fieldEncoding == UA_FIELDENCODING_RAWDATA) {
             return UA_STATUSCODE_BADNOTIMPLEMENTED;
         } else if(src->header.fieldEncoding == UA_FIELDENCODING_DATAVALUE) {
-            for (UA_UInt16 i = 0; i < src->data.keyFrameData.fieldCount; i++) {
-                rv = UA_DataValue_encodeBinary(&(src->data.keyFrameData.dataSetFields[i]), bufPos, bufEnd);
+            for(UA_UInt16 i = 0; i < src->data.keyFrameData.fieldCount; i++) {
+                rv = UA_DataValue_encodeBinary(&(src->data.keyFrameData.dataSetFields[i]),
+                                               bufPos, bufEnd);
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
             }
@@ -1117,24 +1153,32 @@ UA_DataSetMessage_encodeBinary(const UA_DataSetMessage* src, UA_Byte **bufPos,
             return rv;
 
         if(src->header.fieldEncoding == UA_FIELDENCODING_VARIANT) {
-            for (UA_UInt16 i = 0; i < src->data.deltaFrameData.fieldCount; i++) {
-                rv = UA_UInt16_encodeBinary(&(src->data.deltaFrameData.deltaFrameFields[i].fieldIndex), bufPos, bufEnd);
+            for(UA_UInt16 i = 0; i < src->data.deltaFrameData.fieldCount; i++) {
+                rv = UA_UInt16_encodeBinary(
+                    &(src->data.deltaFrameData.deltaFrameFields[i].fieldIndex), bufPos,
+                    bufEnd);
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
-                
-                rv = UA_Variant_encodeBinary(&(src->data.deltaFrameData.deltaFrameFields[i].fieldValue.value), bufPos, bufEnd);
+
+                rv = UA_Variant_encodeBinary(
+                    &(src->data.deltaFrameData.deltaFrameFields[i].fieldValue.value),
+                    bufPos, bufEnd);
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
             }
         } else if(src->header.fieldEncoding == UA_FIELDENCODING_RAWDATA) {
             return UA_STATUSCODE_BADNOTIMPLEMENTED;
         } else if(src->header.fieldEncoding == UA_FIELDENCODING_DATAVALUE) {
-            for (UA_UInt16 i = 0; i < src->data.deltaFrameData.fieldCount; i++) {
-                rv = UA_UInt16_encodeBinary(&(src->data.deltaFrameData.deltaFrameFields[i].fieldIndex), bufPos, bufEnd);
+            for(UA_UInt16 i = 0; i < src->data.deltaFrameData.fieldCount; i++) {
+                rv = UA_UInt16_encodeBinary(
+                    &(src->data.deltaFrameData.deltaFrameFields[i].fieldIndex), bufPos,
+                    bufEnd);
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
 
-                rv = UA_DataValue_encodeBinary(&(src->data.deltaFrameData.deltaFrameFields[i].fieldValue), bufPos, bufEnd);
+                rv = UA_DataValue_encodeBinary(
+                    &(src->data.deltaFrameData.deltaFrameFields[i].fieldValue), bufPos,
+                    bufEnd);
                 if(rv != UA_STATUSCODE_GOOD)
                     return rv;
             }
@@ -1148,7 +1192,8 @@ UA_DataSetMessage_encodeBinary(const UA_DataSetMessage* src, UA_Byte **bufPos,
 }
 
 UA_StatusCode
-UA_DataSetMessage_decodeBinary(const UA_ByteString *src, size_t *offset, UA_DataSetMessage* dst) {
+UA_DataSetMessage_decodeBinary(const UA_ByteString *src, size_t *offset,
+                               UA_DataSetMessage *dst) {
     memset(dst, 0, sizeof(UA_DataSetMessage));
     UA_StatusCode rv = UA_DataSetMessageHeader_decodeBinary(src, offset, &dst->header);
     if(rv != UA_STATUSCODE_GOOD)
@@ -1161,11 +1206,12 @@ UA_DataSetMessage_decodeBinary(const UA_ByteString *src, size_t *offset, UA_Data
                 return rv;
 
             if(dst->header.fieldEncoding == UA_FIELDENCODING_VARIANT) {
-                dst->data.keyFrameData.dataSetFields =
-                    (UA_DataValue *)UA_Array_new(dst->data.keyFrameData.fieldCount, &UA_TYPES[UA_TYPES_DATAVALUE]);
-                for (UA_UInt16 i = 0; i < dst->data.keyFrameData.fieldCount; i++) {
+                dst->data.keyFrameData.dataSetFields = (UA_DataValue *)UA_Array_new(
+                    dst->data.keyFrameData.fieldCount, &UA_TYPES[UA_TYPES_DATAVALUE]);
+                for(UA_UInt16 i = 0; i < dst->data.keyFrameData.fieldCount; i++) {
                     UA_DataValue_init(&dst->data.keyFrameData.dataSetFields[i]);
-                    rv = UA_Variant_decodeBinary(src, offset, &dst->data.keyFrameData.dataSetFields[i].value);
+                    rv = UA_Variant_decodeBinary(
+                        src, offset, &dst->data.keyFrameData.dataSetFields[i].value);
                     if(rv != UA_STATUSCODE_GOOD)
                         return rv;
                     dst->data.keyFrameData.dataSetFields[i].hasValue = true;
@@ -1173,10 +1219,11 @@ UA_DataSetMessage_decodeBinary(const UA_ByteString *src, size_t *offset, UA_Data
             } else if(dst->header.fieldEncoding == UA_FIELDENCODING_RAWDATA) {
                 return UA_STATUSCODE_BADNOTIMPLEMENTED;
             } else if(dst->header.fieldEncoding == UA_FIELDENCODING_DATAVALUE) {
-                dst->data.keyFrameData.dataSetFields =
-                    (UA_DataValue *)UA_Array_new(dst->data.keyFrameData.fieldCount, &UA_TYPES[UA_TYPES_DATAVALUE]);
-                for (UA_UInt16 i = 0; i < dst->data.keyFrameData.fieldCount; i++) {
-                    rv = UA_DataValue_decodeBinary(src, offset, &(dst->data.keyFrameData.dataSetFields[i]));
+                dst->data.keyFrameData.dataSetFields = (UA_DataValue *)UA_Array_new(
+                    dst->data.keyFrameData.fieldCount, &UA_TYPES[UA_TYPES_DATAVALUE]);
+                for(UA_UInt16 i = 0; i < dst->data.keyFrameData.fieldCount; i++) {
+                    rv = UA_DataValue_decodeBinary(
+                        src, offset, &(dst->data.keyFrameData.dataSetFields[i]));
                     if(rv != UA_STATUSCODE_GOOD)
                         return rv;
                 }
@@ -1184,36 +1231,51 @@ UA_DataSetMessage_decodeBinary(const UA_ByteString *src, size_t *offset, UA_Data
         }
     } else if(dst->header.dataSetMessageType == UA_DATASETMESSAGE_DATADELTAFRAME) {
         if(dst->header.fieldEncoding != UA_FIELDENCODING_RAWDATA) {
-            rv = UA_UInt16_decodeBinary(src, offset, &dst->data.deltaFrameData.fieldCount);
+            rv =
+                UA_UInt16_decodeBinary(src, offset, &dst->data.deltaFrameData.fieldCount);
             if(rv != UA_STATUSCODE_GOOD)
                 return rv;
 
             if(dst->header.fieldEncoding == UA_FIELDENCODING_VARIANT) {
-                size_t memsize = sizeof(UA_DataSetMessage_DeltaFrameField) * dst->data.deltaFrameData.fieldCount;
-                dst->data.deltaFrameData.deltaFrameFields = (UA_DataSetMessage_DeltaFrameField*)UA_malloc(memsize);
-                for (UA_UInt16 i = 0; i < dst->data.deltaFrameData.fieldCount; i++) {
-                    rv = UA_UInt16_decodeBinary(src, offset, &dst->data.deltaFrameData.deltaFrameFields[i].fieldIndex);
-                    if(rv != UA_STATUSCODE_GOOD)
-                        return rv;
-                    
-                    UA_DataValue_init(&dst->data.deltaFrameData.deltaFrameFields[i].fieldValue);
-                    rv = UA_Variant_decodeBinary(src, offset, &dst->data.deltaFrameData.deltaFrameFields[i].fieldValue.value);
+                size_t memsize = sizeof(UA_DataSetMessage_DeltaFrameField) *
+                                 dst->data.deltaFrameData.fieldCount;
+                dst->data.deltaFrameData.deltaFrameFields =
+                    (UA_DataSetMessage_DeltaFrameField *)UA_malloc(memsize);
+                for(UA_UInt16 i = 0; i < dst->data.deltaFrameData.fieldCount; i++) {
+                    rv = UA_UInt16_decodeBinary(
+                        src, offset,
+                        &dst->data.deltaFrameData.deltaFrameFields[i].fieldIndex);
                     if(rv != UA_STATUSCODE_GOOD)
                         return rv;
 
-                    dst->data.deltaFrameData.deltaFrameFields[i].fieldValue.hasValue = true;
+                    UA_DataValue_init(
+                        &dst->data.deltaFrameData.deltaFrameFields[i].fieldValue);
+                    rv = UA_Variant_decodeBinary(
+                        src, offset,
+                        &dst->data.deltaFrameData.deltaFrameFields[i].fieldValue.value);
+                    if(rv != UA_STATUSCODE_GOOD)
+                        return rv;
+
+                    dst->data.deltaFrameData.deltaFrameFields[i].fieldValue.hasValue =
+                        true;
                 }
             } else if(dst->header.fieldEncoding == UA_FIELDENCODING_RAWDATA) {
                 return UA_STATUSCODE_BADNOTIMPLEMENTED;
             } else if(dst->header.fieldEncoding == UA_FIELDENCODING_DATAVALUE) {
-                size_t memsize = sizeof(UA_DataSetMessage_DeltaFrameField) * dst->data.deltaFrameData.fieldCount;
-                dst->data.deltaFrameData.deltaFrameFields = (UA_DataSetMessage_DeltaFrameField*)UA_malloc(memsize);
-                for (UA_UInt16 i = 0; i < dst->data.deltaFrameData.fieldCount; i++) {
-                    rv = UA_UInt16_decodeBinary(src, offset, &dst->data.deltaFrameData.deltaFrameFields[i].fieldIndex);
+                size_t memsize = sizeof(UA_DataSetMessage_DeltaFrameField) *
+                                 dst->data.deltaFrameData.fieldCount;
+                dst->data.deltaFrameData.deltaFrameFields =
+                    (UA_DataSetMessage_DeltaFrameField *)UA_malloc(memsize);
+                for(UA_UInt16 i = 0; i < dst->data.deltaFrameData.fieldCount; i++) {
+                    rv = UA_UInt16_decodeBinary(
+                        src, offset,
+                        &dst->data.deltaFrameData.deltaFrameFields[i].fieldIndex);
                     if(rv != UA_STATUSCODE_GOOD)
                         return rv;
-                    
-                    rv = UA_DataValue_decodeBinary(src, offset, &(dst->data.deltaFrameData.deltaFrameFields[i].fieldValue));
+
+                    rv = UA_DataValue_decodeBinary(
+                        src, offset,
+                        &(dst->data.deltaFrameData.deltaFrameFields[i].fieldValue));
                     if(rv != UA_STATUSCODE_GOOD)
                         return rv;
                 }
@@ -1228,37 +1290,49 @@ UA_DataSetMessage_decodeBinary(const UA_ByteString *src, size_t *offset, UA_Data
 }
 
 size_t
-UA_DataSetMessage_calcSizeBinary(const UA_DataSetMessage* p) {
+UA_DataSetMessage_calcSizeBinary(const UA_DataSetMessage *p) {
     size_t size = UA_DataSetMessageHeader_calcSizeBinary(&p->header);
 
     if(p->header.dataSetMessageType == UA_DATASETMESSAGE_DATAKEYFRAME) {
         if(p->header.fieldEncoding != UA_FIELDENCODING_RAWDATA)
-            size += UA_calcSizeBinary(&p->data.keyFrameData.fieldCount, &UA_TYPES[UA_TYPES_UINT16]);
+            size += UA_calcSizeBinary(&p->data.keyFrameData.fieldCount,
+                                      &UA_TYPES[UA_TYPES_UINT16]);
 
         if(p->header.fieldEncoding == UA_FIELDENCODING_VARIANT) {
-            for (UA_UInt16 i = 0; i < p->data.keyFrameData.fieldCount; i++)
-                size += UA_calcSizeBinary(&p->data.keyFrameData.dataSetFields[i].value, &UA_TYPES[UA_TYPES_VARIANT]);
+            for(UA_UInt16 i = 0; i < p->data.keyFrameData.fieldCount; i++)
+                size += UA_calcSizeBinary(&p->data.keyFrameData.dataSetFields[i].value,
+                                          &UA_TYPES[UA_TYPES_VARIANT]);
         } else if(p->header.fieldEncoding == UA_FIELDENCODING_RAWDATA) {
             // not implemented
         } else if(p->header.fieldEncoding == UA_FIELDENCODING_DATAVALUE) {
-            for (UA_UInt16 i = 0; i < p->data.keyFrameData.fieldCount; i++)
-                size += UA_calcSizeBinary(&p->data.keyFrameData.dataSetFields[i], &UA_TYPES[UA_TYPES_DATAVALUE]);
+            for(UA_UInt16 i = 0; i < p->data.keyFrameData.fieldCount; i++)
+                size += UA_calcSizeBinary(&p->data.keyFrameData.dataSetFields[i],
+                                          &UA_TYPES[UA_TYPES_DATAVALUE]);
         }
     } else if(p->header.dataSetMessageType == UA_DATASETMESSAGE_DATADELTAFRAME) {
         if(p->header.fieldEncoding != UA_FIELDENCODING_RAWDATA)
-            size += UA_calcSizeBinary(&p->data.deltaFrameData.fieldCount, &UA_TYPES[UA_TYPES_UINT16]);
+            size += UA_calcSizeBinary(&p->data.deltaFrameData.fieldCount,
+                                      &UA_TYPES[UA_TYPES_UINT16]);
 
         if(p->header.fieldEncoding == UA_FIELDENCODING_VARIANT) {
-            for (UA_UInt16 i = 0; i < p->data.deltaFrameData.fieldCount; i++) {
-                size += UA_calcSizeBinary(&p->data.deltaFrameData.deltaFrameFields[i].fieldIndex, &UA_TYPES[UA_TYPES_UINT16]);
-                size += UA_calcSizeBinary(&p->data.deltaFrameData.deltaFrameFields[i].fieldValue.value, &UA_TYPES[UA_TYPES_VARIANT]);
+            for(UA_UInt16 i = 0; i < p->data.deltaFrameData.fieldCount; i++) {
+                size += UA_calcSizeBinary(
+                    &p->data.deltaFrameData.deltaFrameFields[i].fieldIndex,
+                    &UA_TYPES[UA_TYPES_UINT16]);
+                size += UA_calcSizeBinary(
+                    &p->data.deltaFrameData.deltaFrameFields[i].fieldValue.value,
+                    &UA_TYPES[UA_TYPES_VARIANT]);
             }
         } else if(p->header.fieldEncoding == UA_FIELDENCODING_RAWDATA) {
             // not implemented
         } else if(p->header.fieldEncoding == UA_FIELDENCODING_DATAVALUE) {
-            for (UA_UInt16 i = 0; i < p->data.deltaFrameData.fieldCount; i++) {
-                size += UA_calcSizeBinary(&p->data.deltaFrameData.deltaFrameFields[i].fieldIndex, &UA_TYPES[UA_TYPES_UINT16]);
-                size += UA_calcSizeBinary(&p->data.deltaFrameData.deltaFrameFields[i].fieldValue, &UA_TYPES[UA_TYPES_DATAVALUE]);
+            for(UA_UInt16 i = 0; i < p->data.deltaFrameData.fieldCount; i++) {
+                size += UA_calcSizeBinary(
+                    &p->data.deltaFrameData.deltaFrameFields[i].fieldIndex,
+                    &UA_TYPES[UA_TYPES_UINT16]);
+                size += UA_calcSizeBinary(
+                    &p->data.deltaFrameData.deltaFrameFields[i].fieldValue,
+                    &UA_TYPES[UA_TYPES_DATAVALUE]);
             }
         }
     }
@@ -1267,23 +1341,27 @@ UA_DataSetMessage_calcSizeBinary(const UA_DataSetMessage* p) {
     return size;
 }
 
-void UA_DataSetMessage_free(const UA_DataSetMessage* p) {
+void
+UA_DataSetMessage_free(const UA_DataSetMessage *p) {
     if(p->header.dataSetMessageType == UA_DATASETMESSAGE_DATAKEYFRAME) {
         if(p->data.keyFrameData.dataSetFields != NULL)
-            UA_Array_delete(p->data.keyFrameData.dataSetFields, p->data.keyFrameData.fieldCount,
+            UA_Array_delete(p->data.keyFrameData.dataSetFields,
+                            p->data.keyFrameData.fieldCount,
                             &UA_TYPES[UA_TYPES_DATAVALUE]);
         /* Json keys */
-        if(p->data.keyFrameData.fieldNames != NULL){
-            UA_Array_delete(p->data.keyFrameData.fieldNames, p->data.keyFrameData.fieldCount,
-                            &UA_TYPES[UA_TYPES_STRING]);
+        if(p->data.keyFrameData.fieldNames != NULL) {
+            UA_Array_delete(p->data.keyFrameData.fieldNames,
+                            p->data.keyFrameData.fieldCount, &UA_TYPES[UA_TYPES_STRING]);
         }
     } else if(p->header.dataSetMessageType == UA_DATASETMESSAGE_DATADELTAFRAME) {
         if(p->data.deltaFrameData.deltaFrameFields != NULL) {
             for(UA_UInt16 i = 0; i < p->data.deltaFrameData.fieldCount; i++) {
                 if(p->header.fieldEncoding == UA_FIELDENCODING_DATAVALUE) {
-                    UA_DataValue_deleteMembers(&p->data.deltaFrameData.deltaFrameFields[i].fieldValue);
+                    UA_DataValue_deleteMembers(
+                        &p->data.deltaFrameData.deltaFrameFields[i].fieldValue);
                 } else if(p->header.fieldEncoding == UA_FIELDENCODING_VARIANT) {
-                    UA_Variant_deleteMembers(&p->data.deltaFrameData.deltaFrameFields[i].fieldValue.value);
+                    UA_Variant_deleteMembers(
+                        &p->data.deltaFrameData.deltaFrameFields[i].fieldValue.value);
                 }
             }
             UA_free(p->data.deltaFrameData.deltaFrameFields);

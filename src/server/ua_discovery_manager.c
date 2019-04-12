@@ -24,8 +24,9 @@ discovery_createMulticastSocket(void) {
     int flag = 1, ittl = 255;
     struct sockaddr_in in;
     struct ip_mreq mc;
-    char ttl = (char)255; // publish to complete net, not only subnet. See:
-                          // https://docs.oracle.com/cd/E23824_01/html/821-1602/sockets-137.html
+    char ttl =
+        (char)255;  // publish to complete net, not only subnet. See:
+                    // https://docs.oracle.com/cd/E23824_01/html/821-1602/sockets-137.html
 
     memset(&in, 0, sizeof(in));
     in.sin_family = AF_INET;
@@ -46,23 +47,24 @@ discovery_createMulticastSocket(void) {
 
     mc.imr_multiaddr.s_addr = inet_addr("224.0.0.251");
     mc.imr_interface.s_addr = htonl(INADDR_ANY);
-    UA_setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mc, sizeof(mc));
-    UA_setsockopt(s, IPPROTO_IP, IP_MULTICAST_TTL, (char*)&ttl, sizeof(ttl));
-    UA_setsockopt(s, IPPROTO_IP, IP_MULTICAST_TTL, (char*)&ittl, sizeof(ittl));
+    UA_setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mc, sizeof(mc));
+    UA_setsockopt(s, IPPROTO_IP, IP_MULTICAST_TTL, (char *)&ttl, sizeof(ttl));
+    UA_setsockopt(s, IPPROTO_IP, IP_MULTICAST_TTL, (char *)&ittl, sizeof(ittl));
 
-    UA_socket_set_nonblocking(s); //TODO: check return value
+    UA_socket_set_nonblocking(s);  // TODO: check return value
     return s;
 }
 
 static UA_StatusCode
-initMulticastDiscoveryServer(UA_DiscoveryManager *dm, UA_Server* server) {
+initMulticastDiscoveryServer(UA_DiscoveryManager *dm, UA_Server *server) {
     server->discoveryManager.mdnsDaemon = mdnsd_new(QCLASS_IN, 1000);
     UA_initialize_architecture_network();
 
-    if((server->discoveryManager.mdnsSocket = discovery_createMulticastSocket()) == UA_INVALID_SOCKET) {
+    if((server->discoveryManager.mdnsSocket = discovery_createMulticastSocket()) ==
+       UA_INVALID_SOCKET) {
         UA_LOG_SOCKET_ERRNO_WRAP(
-                UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                     "Could not create multicast socket. Error: %s", errno_str));
+            UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                         "Could not create multicast socket. Error: %s", errno_str));
         return UA_STATUSCODE_BADUNEXPECTEDERROR;
     }
     mdnsd_register_receive_callback(server->discoveryManager.mdnsDaemon,
@@ -94,7 +96,8 @@ UA_DiscoveryManager_init(UA_DiscoveryManager *dm, UA_Server *server) {
     dm->mdnsDaemon = NULL;
     dm->mdnsSocket = UA_INVALID_SOCKET;
     dm->mdnsMainSrvAdded = false;
-    if(server->config.applicationDescription.applicationType == UA_APPLICATIONTYPE_DISCOVERYSERVER)
+    if(server->config.applicationDescription.applicationType ==
+       UA_APPLICATIONTYPE_DISCOVERYSERVER)
         initMulticastDiscoveryServer(dm, server);
 
     LIST_INIT(&dm->serverOnNetwork);
@@ -102,7 +105,7 @@ UA_DiscoveryManager_init(UA_DiscoveryManager *dm, UA_Server *server) {
     dm->serverOnNetworkRecordIdCounter = 0;
     dm->serverOnNetworkRecordIdLastReset = UA_DateTime_now();
     memset(dm->serverOnNetworkHash, 0,
-           sizeof(struct serverOnNetwork_hash_entry*) * SERVER_ON_NETWORK_HASH_PRIME);
+           sizeof(struct serverOnNetwork_hash_entry *) * SERVER_ON_NETWORK_HASH_PRIME);
 
     dm->serverOnNetworkCallback = NULL;
     dm->serverOnNetworkCallbackData = NULL;
@@ -124,8 +127,9 @@ UA_DiscoveryManager_deleteMembers(UA_DiscoveryManager *dm, UA_Server *server) {
         UA_free(ps);
     }
 
-# ifdef UA_ENABLE_DISCOVERY_MULTICAST
-    if(server->config.applicationDescription.applicationType == UA_APPLICATIONTYPE_DISCOVERYSERVER)
+#ifdef UA_ENABLE_DISCOVERY_MULTICAST
+    if(server->config.applicationDescription.applicationType ==
+       UA_APPLICATIONTYPE_DISCOVERYSERVER)
         destroyMulticastDiscoveryServer(dm);
 
     serverOnNetwork_list_entry *son, *son_tmp;
@@ -138,15 +142,15 @@ UA_DiscoveryManager_deleteMembers(UA_DiscoveryManager *dm, UA_Server *server) {
     }
 
     for(size_t i = 0; i < SERVER_ON_NETWORK_HASH_PRIME; i++) {
-        serverOnNetwork_hash_entry* currHash = dm->serverOnNetworkHash[i];
+        serverOnNetwork_hash_entry *currHash = dm->serverOnNetworkHash[i];
         while(currHash) {
-            serverOnNetwork_hash_entry* nextHash = currHash->next;
+            serverOnNetwork_hash_entry *nextHash = currHash->next;
             UA_free(currHash);
             currHash = nextHash;
         }
     }
 
-# endif /* UA_ENABLE_DISCOVERY_MULTICAST */
+#endif /* UA_ENABLE_DISCOVERY_MULTICAST */
 }
 
 #endif /* UA_ENABLE_DISCOVERY */

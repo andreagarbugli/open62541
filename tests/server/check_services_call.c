@@ -5,16 +5,18 @@
  * Copyright 2019 (c) basysKom GmbH <opensource@basyskom.com> (Author: Frank Meerkötter)
  */
 
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
+#include <open62541/types.h>
+
+#include "server/ua_server_internal.h"
+#include "server/ua_services.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "check.h"
-#include "server/ua_services.h"
-#include "ua_client.h"
-#include "ua_types.h"
-#include "ua_config_default.h"
-#include "server/ua_server_internal.h"
 
 static UA_Server *server = NULL;
 static UA_ServerConfig *config = NULL;
@@ -94,13 +96,28 @@ START_TEST(callKnownMethodOnUnknownObject) {
 START_TEST(callMethodAndObjectExistsButMethodHasWrongNodeClass) {
     UA_CallMethodRequest callMethodRequest;
     UA_CallMethodRequest_init(&callMethodRequest);
-    callMethodRequest.methodId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_AUDITING);  // not a method
+    callMethodRequest.methodId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS);  // not a method
     callMethodRequest.objectId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
 
     UA_CallMethodResult result;
     UA_CallMethodResult_init(&result);
     result = UA_Server_call(server, &callMethodRequest);
     ck_assert_int_eq(result.statusCode, UA_STATUSCODE_BADNODECLASSINVALID);
+} END_TEST
+
+START_TEST(callMethodOnUnrelatedObject) {
+    /* Minimal nodeset does not add any method nodes we may call here */
+#ifdef UA_GENERATED_NAMESPACE_ZERO
+    UA_CallMethodRequest callMethodRequest;
+    UA_CallMethodRequest_init(&callMethodRequest);
+    callMethodRequest.methodId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_GETMONITOREDITEMS);
+    callMethodRequest.objectId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);  // not connected via hasComponent
+
+    UA_CallMethodResult result;
+    UA_CallMethodResult_init(&result);
+    result = UA_Server_call(server, &callMethodRequest);
+    ck_assert_int_eq(result.statusCode, UA_STATUSCODE_BADMETHODINVALID);
+#endif
 } END_TEST
 
 START_TEST(callMethodAndObjectExistsButNoFunctionPointerAttached) {
@@ -127,6 +144,69 @@ START_TEST(callMethodNonExecutable) {
     ck_assert_int_eq(result.statusCode, UA_STATUSCODE_BADNOTEXECUTABLE);
 } END_TEST
 
+START_TEST(callMethodWithMissingArguments) {
+/* Minimal nodeset does not add any method nodes we may call here */
+#ifdef UA_GENERATED_NAMESPACE_ZERO
+    UA_CallMethodRequest callMethodRequest;
+    UA_CallMethodRequest_init(&callMethodRequest);
+    callMethodRequest.methodId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_GETMONITOREDITEMS);
+    callMethodRequest.objectId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
+
+    UA_CallMethodResult result;
+    UA_CallMethodResult_init(&result);
+    result = UA_Server_call(server, &callMethodRequest);
+    ck_assert_int_eq(result.statusCode, UA_STATUSCODE_BADARGUMENTSMISSING);
+#endif
+} END_TEST
+
+START_TEST(callMethodWithTooManyArguments) {
+/* Minimal nodeset does not add any method nodes we may call here */
+#ifdef UA_GENERATED_NAMESPACE_ZERO
+    UA_Variant inputArguments[2];
+    UA_Variant_init(&inputArguments[0]);
+    UA_Variant_init(&inputArguments[1]);
+
+    UA_CallMethodRequest callMethodRequest;
+    UA_CallMethodRequest_init(&callMethodRequest);
+    callMethodRequest.inputArgumentsSize = 2;         // 1 would be correct
+    callMethodRequest.inputArguments = (UA_Variant*)&inputArguments;
+    callMethodRequest.methodId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_GETMONITOREDITEMS);
+    callMethodRequest.objectId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
+
+    UA_CallMethodResult result;
+    UA_CallMethodResult_init(&result);
+    result = UA_Server_call(server, &callMethodRequest);
+    ck_assert_int_eq(result.statusCode, UA_STATUSCODE_BADTOOMANYARGUMENTS);
+#endif
+} END_TEST
+
+START_TEST(callMethodWithWronglyTypedArguments) {
+/* Minimal nodeset does not add any method nodes we may call here */
+#ifdef UA_GENERATED_NAMESPACE_ZERO
+    UA_Variant inputArgument;
+    UA_Variant_init(&inputArgument);
+    UA_Double wrongType = 1.0;
+    UA_Variant_setScalar(&inputArgument, &wrongType, &UA_TYPES[UA_TYPES_DOUBLE]);  // UA_UInt32 would be correct
+
+    UA_CallMethodRequest callMethodRequest;
+    UA_CallMethodRequest_init(&callMethodRequest);
+    callMethodRequest.inputArgumentsSize = 1;
+    callMethodRequest.inputArguments = &inputArgument;
+    callMethodRequest.methodId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_GETMONITOREDITEMS);
+    callMethodRequest.objectId = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
+
+    UA_CallMethodResult result;
+    UA_CallMethodResult_init(&result);
+    result = UA_Server_call(server, &callMethodRequest);
+
+    ck_assert_int_gt(result.inputArgumentResultsSize, 0);
+    ck_assert_int_eq(result.inputArgumentResults[0], UA_STATUSCODE_BADTYPEMISMATCH);
+    ck_assert_int_eq(result.statusCode, UA_STATUSCODE_BADINVALIDARGUMENT);
+
+    UA_Array_delete(result.inputArgumentResults, result.inputArgumentResultsSize, &UA_TYPES[UA_TYPES_STATUSCODE]);
+#endif
+} END_TEST
+
 int main(void) {
     Suite *s = suite_create("services_call");
 
@@ -136,7 +216,11 @@ int main(void) {
     tcase_add_test(tc_call, callKnownMethodOnUnknownObject);
     tcase_add_test(tc_call, callMethodAndObjectExistsButMethodHasWrongNodeClass);
     tcase_add_test(tc_call, callMethodAndObjectExistsButNoFunctionPointerAttached);
-    tcase_add_test(tc_call, callMethodNonExecutable);;
+    tcase_add_test(tc_call, callMethodNonExecutable);
+    tcase_add_test(tc_call, callMethodOnUnrelatedObject);
+    tcase_add_test(tc_call, callMethodWithMissingArguments);
+    tcase_add_test(tc_call, callMethodWithTooManyArguments);
+    tcase_add_test(tc_call, callMethodWithWronglyTypedArguments);
     suite_add_tcase(s, tc_call);
 
     SRunner *sr = srunner_create(s);

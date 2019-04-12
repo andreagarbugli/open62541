@@ -7,26 +7,28 @@
 #ifdef UA_ARCHITECTURE_WEC7
 
 #ifndef _BSD_SOURCE
-# define _BSD_SOURCE
+#define _BSD_SOURCE
 #endif
 
-#include "ua_types.h"
+#include <open62541/types.h>
+
 #include <time.h>
 /* Backup definition of SLIST_ENTRY on mingw winnt.h */
-# ifdef SLIST_ENTRY
-#  pragma push_macro("SLIST_ENTRY")
-#  undef SLIST_ENTRY
-#  define POP_SLIST_ENTRY
-# endif
-# include <windows.h>
+#ifdef SLIST_ENTRY
+#pragma push_macro("SLIST_ENTRY")
+#undef SLIST_ENTRY
+#define POP_SLIST_ENTRY
+#endif
+#include <windows.h>
 /* restore definition */
-# ifdef POP_SLIST_ENTRY
-#  undef SLIST_ENTRY
-#  undef POP_SLIST_ENTRY
-#  pragma pop_macro("SLIST_ENTRY")
-# endif
+#ifdef POP_SLIST_ENTRY
+#undef SLIST_ENTRY
+#undef POP_SLIST_ENTRY
+#pragma pop_macro("SLIST_ENTRY")
+#endif
 
-UA_DateTime UA_DateTime_now(void) {
+UA_DateTime
+UA_DateTime_now(void) {
     /* Windows filetime has the same definition as UA_DateTime */
     FILETIME ft;
     SYSTEMTIME st;
@@ -38,11 +40,13 @@ UA_DateTime UA_DateTime_now(void) {
     return (UA_DateTime)ul.QuadPart;
 }
 
-UA_Int64 UA_DateTime_localTimeUtcOffset(void) {
+UA_Int64
+UA_DateTime_localTimeUtcOffset(void) {
     return 0;
 }
 
-UA_DateTime UA_DateTime_nowMonotonic(void) {
+UA_DateTime
+UA_DateTime_nowMonotonic(void) {
     LARGE_INTEGER freq, ticks;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&ticks);

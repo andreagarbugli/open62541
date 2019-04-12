@@ -2,15 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <open62541/client.h>
+#include <open62541/client_config_default.h>
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
+
+#include "client/ua_client_internal.h"
+#include "ua_network_tcp.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "ua_types.h"
-#include "ua_server.h"
-#include "ua_client.h"
-#include "client/ua_client_internal.h"
-#include "ua_client_highlevel.h"
-#include "ua_config_default.h"
-#include "ua_network_tcp.h"
 
 #include "check.h"
 #include "testing_clock.h"
@@ -74,6 +75,21 @@ START_TEST(Client_subscription) {
                                                                             NULL, NULL, NULL);
     ck_assert_uint_eq(response.responseHeader.serviceResult, UA_STATUSCODE_GOOD);
     UA_UInt32 subId = response.subscriptionId;
+
+    // a valid UA_Client_Subscriptions_modify
+    UA_ModifySubscriptionRequest modifySubscriptionRequest;
+    UA_ModifySubscriptionRequest_init(&modifySubscriptionRequest);
+    modifySubscriptionRequest.subscriptionId = response.subscriptionId;
+    modifySubscriptionRequest.requestedPublishingInterval = response.revisedPublishingInterval;
+    modifySubscriptionRequest.requestedLifetimeCount = response.revisedLifetimeCount;
+    modifySubscriptionRequest.requestedMaxKeepAliveCount = response.revisedMaxKeepAliveCount;
+    UA_ModifySubscriptionResponse modifySubscriptionResponse = UA_Client_Subscriptions_modify(client,modifySubscriptionRequest);
+    ck_assert_int_eq(modifySubscriptionResponse.responseHeader.serviceResult, UA_STATUSCODE_GOOD);
+
+    // an invalid UA_Client_Subscriptions_modify
+    modifySubscriptionRequest.subscriptionId = 99999; // invalid
+    modifySubscriptionResponse = UA_Client_Subscriptions_modify(client,modifySubscriptionRequest);
+    ck_assert_int_eq(modifySubscriptionResponse.responseHeader.serviceResult, UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID);
 
     /* monitor the server state */
     UA_MonitoredItemCreateRequest monRequest =
@@ -483,7 +499,6 @@ START_TEST(Client_methodcall) {
     UA_CreateSubscriptionResponse response = UA_Client_Subscriptions_create(client, request,
                                                                             NULL, NULL, NULL);
     ck_assert_uint_eq(response.responseHeader.serviceResult, UA_STATUSCODE_GOOD);
-    UA_UInt32 subId = response.subscriptionId;
 
     /* monitor the server state */
     UA_MonitoredItemCreateRequest monRequest =
@@ -495,7 +510,10 @@ START_TEST(Client_methodcall) {
                                                   monRequest, NULL, NULL, NULL);
     ck_assert_uint_eq(monResponse.statusCode, UA_STATUSCODE_GOOD);
 
+/* Minimal nodeset does not contain any method we can call here */
+#ifdef UA_GENERATED_NAMESPACE_ZERO
     UA_UInt32 monId = monResponse.monitoredItemId;
+    UA_UInt32 subId = response.subscriptionId;
 
     /* call a method to get monitored item id */
     UA_Variant input;
@@ -526,6 +544,7 @@ START_TEST(Client_methodcall) {
     ck_assert_uint_eq(retval, UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID);
 
     UA_Variant_deleteMembers(&input);
+#endif
 
     UA_Client_disconnect(client);
     UA_Client_delete(client);

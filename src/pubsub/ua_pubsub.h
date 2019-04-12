@@ -8,26 +8,28 @@
 #ifndef UA_PUBSUB_H_
 #define UA_PUBSUB_H_
 
-#include "ua_plugin_pubsub.h"
-#include "ua_pubsub_networkmessage.h"
-#include "ua_server.h"
-#include "ua_server_pubsub.h"
+#include <open62541/plugin/pubsub.h>
+#include <open62541/server.h>
+#include <open62541/server_pubsub.h>
+
 #include "open62541_queue.h"
+#include "ua_pubsub_networkmessage.h"
 
 _UA_BEGIN_DECLS
 
 #ifdef UA_ENABLE_PUBSUB /* conditional compilation */
 
-//forward declarations
+// forward declarations
 struct UA_WriterGroup;
 typedef struct UA_WriterGroup UA_WriterGroup;
 
-/* The configuration structs (public part of PubSub entities) are defined in include/ua_plugin_pubsub.h */
+/* The configuration structs (public part of PubSub entities) are defined in
+ * include/ua_plugin_pubsub.h */
 
 /**********************************************/
 /*            PublishedDataSet                */
 /**********************************************/
-typedef struct{
+typedef struct {
     UA_PublishedDataSetConfig config;
     UA_DataSetMetaDataType dataSetMetaData;
     LIST_HEAD(UA_ListOfDataSetField, UA_DataSetField) fields;
@@ -37,26 +39,30 @@ typedef struct{
 } UA_PublishedDataSet;
 
 UA_StatusCode
-UA_PublishedDataSetConfig_copy(const UA_PublishedDataSetConfig *src, UA_PublishedDataSetConfig *dst);
+UA_PublishedDataSetConfig_copy(const UA_PublishedDataSetConfig *src,
+                               UA_PublishedDataSetConfig *dst);
 UA_PublishedDataSet *
 UA_PublishedDataSet_findPDSbyId(UA_Server *server, UA_NodeId identifier);
 void
-UA_PublishedDataSet_deleteMembers(UA_Server *server, UA_PublishedDataSet *publishedDataSet);
+UA_PublishedDataSet_deleteMembers(UA_Server *server,
+                                  UA_PublishedDataSet *publishedDataSet);
 
 /**********************************************/
 /*               Connection                   */
 /**********************************************/
-//the connection config (public part of connection) object is defined in include/ua_plugin_pubsub.h
-typedef struct{
+// the connection config (public part of connection) object is defined in
+// include/ua_plugin_pubsub.h
+typedef struct {
     UA_PubSubConnectionConfig *config;
-    //internal fields
+    // internal fields
     UA_PubSubChannel *channel;
     UA_NodeId identifier;
     LIST_HEAD(UA_ListOfWriterGroup, UA_WriterGroup) writerGroups;
 } UA_PubSubConnection;
 
 UA_StatusCode
-UA_PubSubConnectionConfig_copy(const UA_PubSubConnectionConfig *src, UA_PubSubConnectionConfig *dst);
+UA_PubSubConnectionConfig_copy(const UA_PubSubConnectionConfig *src,
+                               UA_PubSubConnectionConfig *dst);
 UA_PubSubConnection *
 UA_PubSubConnection_findConnectionbyId(UA_Server *server, UA_NodeId connectionIdentifier);
 void
@@ -69,22 +75,22 @@ UA_PubSubConnection_deleteMembers(UA_Server *server, UA_PubSubConnection *connec
 /**********************************************/
 
 #ifdef UA_ENABLE_PUBSUB_DELTAFRAMES
-typedef struct UA_DataSetWriterSample{
+typedef struct UA_DataSetWriterSample {
     UA_Boolean valueChanged;
     UA_DataValue value;
 } UA_DataSetWriterSample;
 #endif
 
-typedef struct UA_DataSetWriter{
+typedef struct UA_DataSetWriter {
     UA_DataSetWriterConfig config;
-    //internal fields
+    // internal fields
     LIST_ENTRY(UA_DataSetWriter) listEntry;
     UA_NodeId identifier;
     UA_NodeId linkedWriterGroup;
     UA_NodeId connectedDataSet;
     UA_ConfigurationVersionDataType connectedDataSetVersion;
 #ifdef UA_ENABLE_PUBSUB_DELTAFRAMES
-    UA_UInt16 deltaFrameCounter;            //actual count of sent deltaFrames
+    UA_UInt16 deltaFrameCounter;  // actual count of sent deltaFrames
     size_t lastSamplesCount;
     UA_DataSetWriterSample *lastSamples;
 #endif
@@ -92,7 +98,8 @@ typedef struct UA_DataSetWriter{
 } UA_DataSetWriter;
 
 UA_StatusCode
-UA_DataSetWriterConfig_copy(const UA_DataSetWriterConfig *src, UA_DataSetWriterConfig *dst);
+UA_DataSetWriterConfig_copy(const UA_DataSetWriterConfig *src,
+                            UA_DataSetWriterConfig *dst);
 UA_DataSetWriter *
 UA_DataSetWriter_findDSWbyId(UA_Server *server, UA_NodeId identifier);
 
@@ -100,9 +107,9 @@ UA_DataSetWriter_findDSWbyId(UA_Server *server, UA_NodeId identifier);
 /*               WriterGroup                  */
 /**********************************************/
 
-struct UA_WriterGroup{
+struct UA_WriterGroup {
     UA_WriterGroupConfig config;
-    //internal fields
+    // internal fields
     LIST_ENTRY(UA_WriterGroup) listEntry;
     UA_NodeId identifier;
     UA_NodeId linkedConnection;
@@ -121,12 +128,12 @@ UA_WriterGroup_findWGbyId(UA_Server *server, UA_NodeId identifier);
 /*               DataSetField                 */
 /**********************************************/
 
-typedef struct UA_DataSetField{
+typedef struct UA_DataSetField {
     UA_DataSetFieldConfig config;
-    //internal fields
+    // internal fields
     LIST_ENTRY(UA_DataSetField) listEntry;
     UA_NodeId identifier;
-    UA_NodeId publishedDataSet;             //ref to parent pds
+    UA_NodeId publishedDataSet;  // ref to parent pds
     UA_FieldMetaData fieldMetaData;
     UA_UInt64 sampleCallbackId;
     UA_Boolean sampleCallbackIsRegistered;

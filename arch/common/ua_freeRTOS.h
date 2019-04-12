@@ -11,26 +11,30 @@
 #include <string.h>
 
 #ifdef BYTE_ORDER
-# undef BYTE_ORDER
+#undef BYTE_ORDER
 #endif
-
-#include <unistd.h> // read, write, close
 
 #define UA_sleep_ms(X) vTaskDelay(pdMS_TO_TICKS(X))
 
 #ifdef OPEN62541_FEERTOS_USE_OWN_MEM
-# define UA_free vPortFree
-# define UA_malloc pvPortMalloc
-# define UA_calloc pvPortCalloc
-# define UA_realloc pvPortRealloc
+#define UA_free vPortFree
+#define UA_malloc pvPortMalloc
+#define UA_calloc pvPortCalloc
+#define UA_realloc pvPortRealloc
 #else
-# define UA_free free
-# define UA_malloc malloc
-# define UA_calloc calloc
-# define UA_realloc realloc
+#define UA_free free
+#define UA_malloc malloc
+#define UA_calloc calloc
+#define UA_realloc realloc
 #endif
 
-#define UA_access access
+#ifdef UA_ENABLE_DISCOVERY_SEMAPHORE
+#ifndef UA_fileExists
+#define UA_fileExists(X)                                                                 \
+    (0)  // file managing is not part of freeRTOS. If the system provides it, please
+         // define it before
+#endif  // UA_fileExists
+#endif
 
 // No log colors on freeRTOS
 // #define UA_ENABLE_LOG_COLORS
@@ -38,9 +42,10 @@
 #include <stdio.h>
 #define UA_snprintf snprintf
 
-#define UA_LOG_SOCKET_ERRNO_WRAP(LOG) { \
-    char *errno_str = ""; \
-    LOG; \
-}
+#define UA_LOG_SOCKET_ERRNO_WRAP(LOG)                                                    \
+    {                                                                                    \
+        char *errno_str = "";                                                            \
+        LOG;                                                                             \
+    }
 
 #endif /* ARCH_COMMON_FREERTOS62541_H_ */

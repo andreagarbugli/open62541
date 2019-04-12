@@ -2,16 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <open62541/server_config_default.h>
+
+#include "server/ua_server_internal.h"
+#include "server/ua_services.h"
+
+#include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include "check.h"
-#include "server/ua_services.h"
-#include "ua_client.h"
-#include "ua_types.h"
-#include "ua_config_default.h"
-#include "server/ua_server_internal.h"
 
 static UA_Server *server = NULL;
 static UA_ServerConfig *config = NULL;
@@ -165,6 +164,9 @@ START_TEST(InstantiateVariableTypeNodeLessDims) {
 
 START_TEST(AddComplexTypeWithInheritance) {
     /* add a variable node to the address space */
+
+    /* Node UA_NS0ID_SERVERTYPE is not available in the minimal NS0 */
+#ifdef UA_GENERATED_NAMESPACE_ZERO
     UA_ObjectAttributes attr = UA_ObjectAttributes_default;
     attr.description = UA_LOCALIZEDTEXT("en-US","fakeServerStruct");
     attr.displayName = UA_LOCALIZEDTEXT("en-US","fakeServerStruct");
@@ -176,10 +178,11 @@ START_TEST(AddComplexTypeWithInheritance) {
     UA_StatusCode res =
         UA_Server_addObjectNode(server, myObjectNodeId, parentNodeId,
                                 parentReferenceNodeId, myObjectName,
-                                UA_NODEID_NUMERIC(0, 2004), attr,
+                                UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE), attr,
                                 &handleCalled, NULL);
     ck_assert_int_eq(UA_STATUSCODE_GOOD, res);
     ck_assert_int_gt(handleCalled, 0); // Should be 58, but may depend on NS0 XML detail
+#endif
 } END_TEST
 
 START_TEST(AddNodeTwiceGivesError) {
@@ -395,11 +398,15 @@ START_TEST(InstantiateObjectType) {
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
                                        mnAttr, NULL, &manufacturerNameId);
     ck_assert_int_eq(retval, UA_STATUSCODE_GOOD);
+
+    /* UA_NS0ID_MODELLINGRULE_MANDATORY is not available in Minimal Nodeset */
+#ifdef UA_GENERATED_NAMESPACE_ZERO
     /* Make the manufacturer name mandatory */
     retval = UA_Server_addReference(server, manufacturerNameId,
                                     UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
                                     UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
     ck_assert_int_eq(retval, UA_STATUSCODE_GOOD);
+#endif
 
     UA_VariableAttributes modelAttr = UA_VariableAttributes_default;
     modelAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ModelName");
@@ -430,11 +437,14 @@ START_TEST(InstantiateObjectType) {
                                        statusAttr, NULL, &statusId);
     ck_assert_int_eq(retval, UA_STATUSCODE_GOOD);
 
+/* UA_NS0ID_MODELLINGRULE_MANDATORY is not available in Minimal Nodeset */
+#ifdef UA_GENERATED_NAMESPACE_ZERO
     /* Make the status variable mandatory */
     retval = UA_Server_addReference(server, statusId,
                                     UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
                                     UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), true);
     ck_assert_int_eq(retval, UA_STATUSCODE_GOOD);
+#endif
 
     UA_VariableAttributes rpmAttr = UA_VariableAttributes_default;
     rpmAttr.displayName = UA_LOCALIZEDTEXT("en-US", "MotorRPM");

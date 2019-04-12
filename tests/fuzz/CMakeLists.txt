@@ -1,10 +1,10 @@
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${PROJECT_SOURCE_DIR}/deps)
-include_directories(${PROJECT_SOURCE_DIR}/src)
-include_directories(${PROJECT_SOURCE_DIR}/src/server)
-include_directories(${PROJECT_SOURCE_DIR}/plugins)
-include_directories(${PROJECT_SOURCE_DIR}/tests/testing-plugins)
-include_directories(${PROJECT_BINARY_DIR}/src_generated)
+get_property(open62541_BUILD_INCLUDE_DIRS TARGET open62541 PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+include_directories(${open62541_BUILD_INCLUDE_DIRS})
+# ua_server_internal.h
+include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/src/server")
+# testing_clock.h
+include_directories("${PROJECT_SOURCE_DIR}/tests/testing-plugins")
 
 if(NOT MSVC)
     add_definitions(-Wno-deprecated-declarations)
@@ -58,15 +58,16 @@ set(fuzzing_plugin_sources ${PROJECT_SOURCE_DIR}/arch/ua_network_tcp.c
         ${PROJECT_SOURCE_DIR}/plugins/ua_config_default.c
         ${PROJECT_SOURCE_DIR}/plugins/ua_nodestore_default.c
         ${PROJECT_SOURCE_DIR}/plugins/ua_accesscontrol_default.c
-        ${PROJECT_SOURCE_DIR}/plugins/ua_pki_certificate.c
+        ${PROJECT_SOURCE_DIR}/plugins/ua_pki_default.c
         ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_none.c
 )
 
 if(UA_ENABLE_ENCRYPTION)
-    set(fuzzing_plugin_sources ${fuzzing_plugin_sources}
-        ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic128rsa15.c)
-    set(fuzzing_plugin_sources ${fuzzing_plugin_sources}
-        ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic256sha256.c)
+  list(APPEND fuzzing_plugin_sources
+       ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/securitypolicy_mbedtls_common.c
+              ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic128rsa15.c
+              ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic256.c
+              ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic256sha256.c)
 endif()
 
 add_library(open62541-fuzzplugins OBJECT

@@ -2,12 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "ua_server.h"
-#include "ua_client.h"
-#include "ua_config_default.h"
-#include "ua_client_highlevel.h"
+#include <open62541/client.h>
+#include <open62541/client_config_default.h>
+#include <open62541/client_highlevel.h>
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
+
 #include "ua_network_tcp.h"
-#include "check.h"
+
+#include <check.h>
+
 #include "thread_wrapper.h"
 
 UA_Server *server;
@@ -112,6 +116,8 @@ START_TEST(Node_Add) {
         ck_assert_uint_eq(retval, UA_STATUSCODE_GOOD);
     }
 
+    /* Minimal nodeset does not contain UA_NS0ID_INTEGER node */
+    #ifdef UA_GENERATED_NAMESPACE_ZERO
     // Create Int128 DataType within Integer Datatype
     {
         UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
@@ -123,6 +129,7 @@ START_TEST(Node_Add) {
                                            UA_QUALIFIEDNAME(1, "Int128"), attr, &newDataTypeId);
         ck_assert_uint_eq(retval, UA_STATUSCODE_GOOD);
     }
+    #endif
 
     // Create PointType VariableType within BaseDataVariableType
     {
@@ -538,7 +545,9 @@ static void checkNodeClass(UA_Client *clientNc, const UA_NodeId nodeId, const UA
 START_TEST(Node_ReadWrite_Class) {
     checkNodeClass(client, nodeReadWriteInt, UA_NODECLASS_VARIABLE);
     checkNodeClass(client, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), UA_NODECLASS_OBJECT);
-#ifdef UA_ENABLE_METHODCALLS
+
+    /* Minimal nodeset does not contain UA_NS0ID_SERVER_GETMONITOREDITEMS node */
+#if defined(UA_ENABLE_METHODCALLS) && defined(UA_GENERATED_NAMESPACE_ZERO)
     checkNodeClass(client, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_GETMONITOREDITEMS), UA_NODECLASS_METHOD);
 #endif
 

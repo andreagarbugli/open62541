@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2017-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
@@ -20,10 +20,10 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-static const UA_NodeId overflowEventType =
-    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_EVENTQUEUEOVERFLOWEVENTTYPE}};
-static const UA_NodeId simpleOverflowEventType =
-    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_SIMPLEOVERFLOWEVENTTYPE}};
+static const UA_NodeId overflowEventType = {
+    0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_EVENTQUEUEOVERFLOWEVENTTYPE}};
+static const UA_NodeId simpleOverflowEventType = {
+    0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_SIMPLEOVERFLOWEVENTTYPE}};
 
 static UA_Boolean
 UA_Notification_isOverflowEvent(UA_Server *server, UA_Notification *n) {
@@ -35,8 +35,8 @@ UA_Notification_isOverflowEvent(UA_Server *server, UA_Notification *n) {
     if(efl->eventFieldsSize == 1 &&
        efl->eventFields[0].type == &UA_TYPES[UA_TYPES_NODEID] &&
        isNodeInTree(&server->config.nodestore,
-                    (const UA_NodeId *)efl->eventFields[0].data,
-                    &overflowEventType, &subtypeId, 1)) {
+                    (const UA_NodeId *)efl->eventFields[0].data, &overflowEventType,
+                    &subtypeId, 1)) {
         return true;
     }
 
@@ -45,7 +45,8 @@ UA_Notification_isOverflowEvent(UA_Server *server, UA_Notification *n) {
 
 static UA_Notification *
 createEventOverflowNotification(UA_MonitoredItem *mon) {
-    UA_Notification *overflowNotification = (UA_Notification *) UA_malloc(sizeof(UA_Notification));
+    UA_Notification *overflowNotification =
+        (UA_Notification *)UA_malloc(sizeof(UA_Notification));
     if(!overflowNotification)
         return NULL;
 
@@ -74,8 +75,8 @@ createEventOverflowNotification(UA_MonitoredItem *mon) {
 #endif
 
 void
-UA_Notification_enqueue(UA_Server *server, UA_Subscription *sub,
-                        UA_MonitoredItem *mon, UA_Notification *n) {
+UA_Notification_enqueue(UA_Server *server, UA_Subscription *sub, UA_MonitoredItem *mon,
+                        UA_Notification *n) {
     /* Add to the MonitoredItem */
     TAILQ_INSERT_TAIL(&mon->queue, n, listEntry);
     ++mon->queueSize;
@@ -160,7 +161,7 @@ UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem) {
     if(monitoredItem->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY) {
         /* Remove the sampling callback */
         UA_MonitoredItem_unregisterSampleCallback(server, monitoredItem);
-    } else if (monitoredItem->monitoredItemType != UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
+    } else if(monitoredItem->monitoredItemType != UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
         /* TODO: Access val data.event */
         UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
                      "MonitoredItemTypes other than ChangeNotify or EventNotify "
@@ -171,8 +172,8 @@ UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem) {
      * local MonitoredItem) */
     if(monitoredItem->subscription) {
         UA_Notification *notification, *notification_tmp;
-        TAILQ_FOREACH_SAFE(notification, &monitoredItem->queue,
-                           listEntry, notification_tmp) {
+        TAILQ_FOREACH_SAFE(notification, &monitoredItem->queue, listEntry,
+                           notification_tmp) {
             /* Remove the item from the queues and free the memory */
             UA_Notification_dequeue(server, notification);
             UA_Notification_delete(notification);
@@ -206,9 +207,10 @@ UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem) {
         UA_Server_getNodeContext(server, monitoredItem->monitoredNodeId, &targetContext);
 
         /* Deregister */
-        server->config.monitoredItemRegisterCallback(server, &session->sessionId,
-                                                     session->sessionHandle, &monitoredItem->monitoredNodeId,
-                                                     targetContext, monitoredItem->attributeId, true);
+        server->config.monitoredItemRegisterCallback(
+            server, &session->sessionId, session->sessionHandle,
+            &monitoredItem->monitoredNodeId, targetContext, monitoredItem->attributeId,
+            true);
     }
 
     /* Remove the monitored item */
@@ -225,9 +227,9 @@ UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem) {
 }
 
 #ifdef __clang_analyzer__
-# define UA_CA_assert(clause) UA_assert(clause)
+#define UA_CA_assert(clause) UA_assert(clause)
 #else
-# define UA_CA_assert(clause)
+#define UA_CA_assert(clause)
 #endif
 
 UA_StatusCode
@@ -264,12 +266,14 @@ UA_MonitoredItem_ensureQueueSpace(UA_Server *server, UA_MonitoredItem *mon) {
             UA_CA_assert(del != last);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
             while(UA_Notification_isOverflowEvent(server, del)) {
-                del = TAILQ_PREV(del, NotificationQueue, listEntry); /* skip overflow events */
+                del = TAILQ_PREV(del, NotificationQueue,
+                                 listEntry); /* skip overflow events */
                 UA_CA_assert(del != last);
             }
 #endif
         }
 
+        // NOLINTNEXTLINE
         UA_assert(del && del->mon == mon);
 
         /* Move after_del right after del in the global queue. (It is already
@@ -343,13 +347,14 @@ UA_MonitoredItem_ensureQueueSpace(UA_Server *server, UA_MonitoredItem *mon) {
         /* Set the infobits */
         if(mon->maxQueueSize > 1) {
             /* Add the infobits either to the newest or the new last entry */
-            indicator->data.value.hasStatus = true;
-            indicator->data.value.status |= (UA_STATUSCODE_INFOTYPE_DATAVALUE |
-                                             UA_STATUSCODE_INFOBITS_OVERFLOW);
+            indicator->data.value.hasStatus = true;  // NOLINT
+            indicator->data.value.status |=
+                (UA_STATUSCODE_INFOTYPE_DATAVALUE | UA_STATUSCODE_INFOBITS_OVERFLOW);
         } else {
             /* If the queue size is reduced to one, remove the infobits */
-            indicator->data.value.status &= ~(UA_StatusCode)(UA_STATUSCODE_INFOTYPE_DATAVALUE |
-                                                             UA_STATUSCODE_INFOBITS_OVERFLOW);
+            indicator->data.value.status &=  // NOLINT
+                ~(UA_StatusCode)(UA_STATUSCODE_INFOTYPE_DATAVALUE |
+                                 UA_STATUSCODE_INFOBITS_OVERFLOW);  // NOLINT
         }
     }
 
@@ -365,9 +370,9 @@ UA_MonitoredItem_registerSampleCallback(UA_Server *server, UA_MonitoredItem *mon
     if(mon->monitoredItemType != UA_MONITOREDITEMTYPE_CHANGENOTIFY)
         return UA_STATUSCODE_GOOD;
 
-    UA_StatusCode retval =
-        UA_Server_addRepeatedCallback(server, (UA_ServerCallback)UA_MonitoredItem_sampleCallback,
-                                      mon, mon->samplingInterval, &mon->sampleCallbackId);
+    UA_StatusCode retval = UA_Server_addRepeatedCallback(
+        server, (UA_ServerCallback)UA_MonitoredItem_sampleCallback, mon,
+        mon->samplingInterval, &mon->sampleCallbackId);
     if(retval == UA_STATUSCODE_GOOD)
         mon->sampleCallbackIsRegistered = true;
     return retval;

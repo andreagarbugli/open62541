@@ -11,10 +11,9 @@
 #ifndef PLUGINS_ARCH_FREERTOSLWIP_UA_ARCHITECTURE_H_
 #define PLUGINS_ARCH_FREERTOSLWIP_UA_ARCHITECTURE_H_
 
-#include "ua_lwip.h"
-#include "ua_freeRTOS.h"
-
 #include "ua_architecture_functions.h"
+#include "ua_freeRTOS.h"
+#include "ua_lwip.h"
 
 #endif /* PLUGINS_ARCH_FREERTOSLWIP_UA_ARCHITECTURE_H_ */
 

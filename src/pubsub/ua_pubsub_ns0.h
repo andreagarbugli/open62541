@@ -37,10 +37,12 @@ UA_StatusCode
 removeDataSetWriterRepresentation(UA_Server *server, UA_DataSetWriter *dataSetWriter);
 
 UA_StatusCode
-addPublishedDataItemsRepresentation(UA_Server *server, UA_PublishedDataSet *publishedDataSet);
+addPublishedDataItemsRepresentation(UA_Server *server,
+                                    UA_PublishedDataSet *publishedDataSet);
 
 UA_StatusCode
-removePublishedDataSetRepresentation(UA_Server *server, UA_PublishedDataSet *publishedDataSet);
+removePublishedDataSetRepresentation(UA_Server *server,
+                                     UA_PublishedDataSet *publishedDataSet);
 
 #endif /* UA_ENABLE_PUBSUB_INFORMATIONMODEL */
 

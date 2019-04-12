@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2015-2016 (c) Sten Grüner
  *    Copyright 2015-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
@@ -14,13 +14,14 @@
 #define UA_CLIENT_INTERNAL_H_
 
 #define UA_INTERNAL
-#include "ua_securechannel.h"
-#include "ua_workqueue.h"
-#include "ua_client.h"
-#include "ua_client_highlevel.h"
-#include "ua_client_subscriptions.h"
-#include "ua_timer.h"
+#include <open62541/client.h>
+#include <open62541/client_highlevel.h>
+#include <open62541/client_subscriptions.h>
+
 #include "open62541_queue.h"
+#include "ua_securechannel.h"
+#include "ua_timer.h"
+#include "ua_workqueue.h"
 
 _UA_BEGIN_DECLS
 
@@ -89,8 +90,7 @@ UA_Client_Subscriptions_backgroundPublishInactivityCheck(UA_Client *client);
 /**************/
 
 UA_StatusCode
-signActivateSessionRequest(UA_SecureChannel *channel,
-                           UA_ActivateSessionRequest *request);
+signActivateSessionRequest(UA_SecureChannel *channel, UA_ActivateSessionRequest *request);
 /**********/
 /* Client */
 /**********/
@@ -106,15 +106,17 @@ typedef struct AsyncServiceCall {
     void *responsedata;
 } AsyncServiceCall;
 
-void UA_Client_AsyncService_cancel(UA_Client *client, AsyncServiceCall *ac,
-                                   UA_StatusCode statusCode);
+void
+UA_Client_AsyncService_cancel(UA_Client *client, AsyncServiceCall *ac,
+                              UA_StatusCode statusCode);
 
-void UA_Client_AsyncService_removeAll(UA_Client *client, UA_StatusCode statusCode);
+void
+UA_Client_AsyncService_removeAll(UA_Client *client, UA_StatusCode statusCode);
 
 typedef struct CustomCallback {
     LIST_ENTRY(CustomCallback)
     pointers;
-    //to find the correct callback
+    // to find the correct callback
     UA_UInt32 callbackId;
 
     UA_ClientAsyncServiceCallback callback;
@@ -149,7 +151,8 @@ struct UA_Client {
     /* Async Service */
     AsyncServiceCall asyncConnectCall;
     LIST_HEAD(ListOfAsyncServiceCall, AsyncServiceCall) asyncServiceCalls;
-    /*When using highlevel functions these are the callbacks that can be accessed by the user*/
+    /*When using highlevel functions these are the callbacks that can be accessed by the
+     * user*/
     LIST_HEAD(ListOfCustomCallback, CustomCallback) customCallbacks;
 
     /* Work queue */
@@ -204,21 +207,20 @@ UA_StatusCode
 openSecureChannel(UA_Client *client, UA_Boolean renew);
 
 UA_StatusCode
-receiveServiceResponse(UA_Client *client, void *response,
-                       const UA_DataType *responseType, UA_DateTime maxDate,
-                       UA_UInt32 *synchronousRequestId);
+receiveServiceResponse(UA_Client *client, void *response, const UA_DataType *responseType,
+                       UA_DateTime maxDate, const UA_UInt32 *synchronousRequestId);
 
 UA_StatusCode
 receiveServiceResponseAsync(UA_Client *client, void *response,
-                             const UA_DataType *responseType);
+                            const UA_DataType *responseType);
 
 UA_StatusCode
-UA_Client_connect_iterate (UA_Client *client);
+UA_Client_connect_iterate(UA_Client *client);
 
 void
 setUserIdentityPolicyId(const UA_EndpointDescription *endpoint,
-                        const UA_DataType *tokenType,
-                        UA_String *policyId, UA_String *securityPolicyUri);
+                        const UA_DataType *tokenType, UA_String *policyId,
+                        UA_String *securityPolicyUri);
 
 UA_SecurityPolicy *
 getSecurityPolicy(UA_Client *client, UA_String policyUri);

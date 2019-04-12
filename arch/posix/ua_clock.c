@@ -1,5 +1,5 @@
 /* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. 
+ * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
  *
  *    Copyright 2016-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
@@ -8,23 +8,29 @@
 
 #ifdef UA_ARCHITECTURE_POSIX
 
-#include "ua_types.h"
+#include <open62541/types.h>
+
 #include <time.h>
+
 #include <sys/time.h>
 
 #if defined(__APPLE__) || defined(__MACH__)
-# include <mach/clock.h>
-# include <mach/mach.h>
+#include <mach/clock.h>
+#include <mach/mach.h>
 #endif
 
-UA_DateTime UA_DateTime_now(void) {
+UA_DateTime
+UA_DateTime_now(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    return (tv.tv_sec * UA_DATETIME_SEC) + (tv.tv_usec * UA_DATETIME_USEC) + UA_DATETIME_UNIX_EPOCH;
+    return (tv.tv_sec * UA_DATETIME_SEC) + (tv.tv_usec * UA_DATETIME_USEC) +
+           UA_DATETIME_UNIX_EPOCH;
 }
 
-/* Credit to https://stackoverflow.com/questions/13804095/get-the-time-zone-gmt-offset-in-c */
-UA_Int64 UA_DateTime_localTimeUtcOffset(void) {
+/* Credit to
+ * https://stackoverflow.com/questions/13804095/get-the-time-zone-gmt-offset-in-c */
+UA_Int64
+UA_DateTime_localTimeUtcOffset(void) {
     time_t gmt, rawtime = time(NULL);
     struct tm *ptm;
     struct tm gbuf;
@@ -32,10 +38,11 @@ UA_Int64 UA_DateTime_localTimeUtcOffset(void) {
     // Request that mktime() looksup dst in timezone database
     ptm->tm_isdst = -1;
     gmt = mktime(ptm);
-    return (UA_Int64) (difftime(rawtime, gmt) * UA_DATETIME_SEC);
+    return (UA_Int64)(difftime(rawtime, gmt) * UA_DATETIME_SEC);
 }
 
-UA_DateTime UA_DateTime_nowMonotonic(void) {
+UA_DateTime
+UA_DateTime_nowMonotonic(void) {
 #if defined(__APPLE__) || defined(__MACH__)
     /* OS X does not have clock_gettime, use clock_get_time */
     clock_serv_t cclock;

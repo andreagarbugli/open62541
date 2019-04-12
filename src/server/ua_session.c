@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2018 (c) Thomas Stalder, Blue Time Concept SA
@@ -14,7 +14,8 @@
 
 #define UA_SESSION_NONCELENTH 32
 
-void UA_Session_init(UA_Session *session) {
+void
+UA_Session_init(UA_Session *session) {
     memset(session, 0, sizeof(UA_Session));
     session->availableContinuationPoints = UA_MAXCONTINUATIONPOINTS;
 #ifdef UA_ENABLE_SUBSCRIPTIONS
@@ -22,7 +23,8 @@ void UA_Session_init(UA_Session *session) {
 #endif
 }
 
-void UA_Session_deleteMembersCleanup(UA_Session *session, UA_Server* server) {
+void
+UA_Session_deleteMembersCleanup(UA_Session *session, UA_Server *server) {
     UA_Session_detachFromSecureChannel(session);
     UA_ApplicationDescription_deleteMembers(&session->clientDescription);
     UA_NodeId_deleteMembers(&session->header.authenticationToken);
@@ -38,12 +40,14 @@ void UA_Session_deleteMembersCleanup(UA_Session *session, UA_Server* server) {
     }
 }
 
-void UA_Session_attachToSecureChannel(UA_Session *session, UA_SecureChannel *channel) {
+void
+UA_Session_attachToSecureChannel(UA_Session *session, UA_SecureChannel *channel) {
     LIST_INSERT_HEAD(&channel->sessions, &session->header, pointers);
     session->header.channel = channel;
 }
 
-void UA_Session_detachFromSecureChannel(UA_Session *session) {
+void
+UA_Session_detachFromSecureChannel(UA_Session *session) {
     if(!session->header.channel)
         return;
     session->header.channel = NULL;
@@ -65,18 +69,20 @@ UA_Session_generateNonce(UA_Session *session) {
             return retval;
     }
 
-    return channel->securityPolicy->symmetricModule.
-        generateNonce(channel->securityPolicy, &session->serverNonce);
+    return channel->securityPolicy->symmetricModule.generateNonce(channel->securityPolicy,
+                                                                  &session->serverNonce);
 }
 
-void UA_Session_updateLifetime(UA_Session *session) {
-    session->validTill = UA_DateTime_nowMonotonic() +
-        (UA_DateTime)(session->timeout * UA_DATETIME_MSEC);
+void
+UA_Session_updateLifetime(UA_Session *session) {
+    session->validTill =
+        UA_DateTime_nowMonotonic() + (UA_DateTime)(session->timeout * UA_DATETIME_MSEC);
 }
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS
 
-void UA_Session_addSubscription(UA_Session *session, UA_Subscription *newSubscription) {
+void
+UA_Session_addSubscription(UA_Session *session, UA_Subscription *newSubscription) {
     newSubscription->subscriptionId = ++session->lastSubscriptionId;
 
     LIST_INSERT_HEAD(&session->serverSubscriptions, newSubscription, listEntry);
@@ -115,9 +121,9 @@ UA_Session_getSubscriptionById(UA_Session *session, UA_UInt32 subscriptionId) {
     return sub;
 }
 
-UA_PublishResponseEntry*
+UA_PublishResponseEntry *
 UA_Session_dequeuePublishReq(UA_Session *session) {
-    UA_PublishResponseEntry* entry = SIMPLEQ_FIRST(&session->responseQueue);
+    UA_PublishResponseEntry *entry = SIMPLEQ_FIRST(&session->responseQueue);
     if(entry) {
         SIMPLEQ_REMOVE_HEAD(&session->responseQueue, listEntry);
         session->numPublishReq--;
@@ -126,7 +132,8 @@ UA_Session_dequeuePublishReq(UA_Session *session) {
 }
 
 void
-UA_Session_queuePublishReq(UA_Session *session, UA_PublishResponseEntry* entry, UA_Boolean head) {
+UA_Session_queuePublishReq(UA_Session *session, UA_PublishResponseEntry *entry,
+                           UA_Boolean head) {
     if(!head)
         SIMPLEQ_INSERT_TAIL(&session->responseQueue, entry, listEntry);
     else

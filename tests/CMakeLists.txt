@@ -12,15 +12,20 @@ if(CMAKE_HOST_SYSTEM_NAME MATCHES "OpenBSD")
     add_definitions(-Wno-gnu-zero-variadic-macro-arguments)
 endif()
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${PROJECT_SOURCE_DIR}/deps)
-include_directories(${PROJECT_SOURCE_DIR}/src)
-include_directories(${PROJECT_SOURCE_DIR}/src/server)
-include_directories(${PROJECT_SOURCE_DIR}/src/pubsub)
-include_directories(${PROJECT_SOURCE_DIR}/plugins)
-include_directories(${PROJECT_SOURCE_DIR}/plugins/historydata)
-include_directories(${PROJECT_BINARY_DIR}/src_generated)
-include_directories(${PROJECT_SOURCE_DIR}/tests/testing-plugins)
+get_property(open62541_BUILD_INCLUDE_DIRS TARGET open62541 PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+include_directories(${open62541_BUILD_INCLUDE_DIRS})
+# ua_server_internal.h
+include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/src/server")
+# testing_clock.h
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/testing-plugins")
+# #include <src_generated/<...>.h>
+include_directories("${PROJECT_BINARY_DIR}")
+
+if(UA_ENABLE_ENCRYPTION)
+    # mbedtls includes
+    include_directories(${MBEDTLS_INCLUDE_DIRS})
+endif()
 
 add_definitions(-DUA_sleep_ms=UA_comboSleep)
 
@@ -42,7 +47,7 @@ set(test_plugin_sources ${PROJECT_SOURCE_DIR}/arch/ua_network_tcp.c
                         ${PROJECT_SOURCE_DIR}/plugins/ua_log_stdout.c
                         ${PROJECT_SOURCE_DIR}/plugins/ua_config_default.c
                         ${PROJECT_SOURCE_DIR}/plugins/ua_accesscontrol_default.c
-                        ${PROJECT_SOURCE_DIR}/plugins/ua_pki_certificate.c
+                        ${PROJECT_SOURCE_DIR}/plugins/ua_pki_default.c
                         ${PROJECT_SOURCE_DIR}/plugins/ua_nodestore_default.c
                         ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_none.c
                         ${PROJECT_SOURCE_DIR}/tests/testing-plugins/testing_policy.c
@@ -51,16 +56,17 @@ set(test_plugin_sources ${PROJECT_SOURCE_DIR}/arch/ua_network_tcp.c
 
 if(UA_ENABLE_HISTORIZING)
     set(test_plugin_sources ${test_plugin_sources}
-                            ${PROJECT_SOURCE_DIR}/plugins/historydata/ua_historydatabackend_memory.c
-                            ${PROJECT_SOURCE_DIR}/plugins/historydata/ua_historydatagathering_default.c
-                            ${PROJECT_SOURCE_DIR}/plugins/historydata/ua_historydatabase_default.c)
+        ${PROJECT_SOURCE_DIR}/plugins/historydata/ua_history_data_backend_memory.c
+        ${PROJECT_SOURCE_DIR}/plugins/historydata/ua_history_data_gathering_default.c
+        ${PROJECT_SOURCE_DIR}/plugins/historydata/ua_history_database_default.c)
 endif()
 
 if(UA_ENABLE_ENCRYPTION)
-    set(test_plugin_sources ${test_plugin_sources}
-        ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic128rsa15.c)
-    set(test_plugin_sources ${test_plugin_sources}
-        ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic256sha256.c)
+  list(APPEND test_plugin_sources
+       ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/securitypolicy_mbedtls_common.c
+              ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic128rsa15.c
+              ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic256.c
+              ${PROJECT_SOURCE_DIR}/plugins/securityPolicies/ua_securitypolicy_basic256sha256.c)
 endif()
 
 add_library(open62541-testplugins OBJECT ${test_plugin_sources} ${PROJECT_SOURCE_DIR}/arch/${UA_ARCHITECTURE}/ua_architecture_functions.c)
@@ -198,6 +204,10 @@ endif()
 add_executable(check_session server/check_session.c $<TARGET_OBJECTS:open62541-object> $<TARGET_OBJECTS:open62541-testplugins>)
 target_link_libraries(check_session ${LIBS})
 add_test_valgrind(session ${TESTS_BINARY_DIR}/check_session)
+
+add_executable(check_server server/check_server.c $<TARGET_OBJECTS:open62541-object> $<TARGET_OBJECTS:open62541-testplugins>)
+target_link_libraries(check_server ${LIBS})
+add_test_valgrind(server ${TESTS_BINARY_DIR}/check_server)
 
 add_executable(check_server_jobs server/check_server_jobs.c $<TARGET_OBJECTS:open62541-object> $<TARGET_OBJECTS:open62541-testplugins>)
 target_link_libraries(check_server_jobs ${LIBS})

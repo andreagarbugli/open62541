@@ -1,21 +1,21 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
  */
 
+#include <open62541/client.h>
+
 #include "ua_server_internal.h"
-#include "ua_client.h"
 
 #ifdef UA_ENABLE_DISCOVERY
 
 static UA_StatusCode
-register_server_with_discovery_server(UA_Server *server,
-                                      UA_Client *client,
+register_server_with_discovery_server(UA_Server *server, UA_Client *client,
                                       const UA_Boolean isUnregister,
-                                      const char* semaphoreFilePath) {
+                                      const char *semaphoreFilePath) {
     /* Prepare the request. Do not cleanup the request after the service call,
      * as the members are stack-allocated or point into the server config. */
     UA_RegisterServer2Request request;
@@ -27,12 +27,13 @@ register_server_with_discovery_server(UA_Server *server,
     request.server.serverUri = server->config.applicationDescription.applicationUri;
     request.server.productUri = server->config.applicationDescription.productUri;
     request.server.serverType = server->config.applicationDescription.applicationType;
-    request.server.gatewayServerUri = server->config.applicationDescription.gatewayServerUri;
+    request.server.gatewayServerUri =
+        server->config.applicationDescription.gatewayServerUri;
 
     if(semaphoreFilePath) {
 #ifdef UA_ENABLE_DISCOVERY_SEMAPHORE
         request.server.semaphoreFilePath =
-            UA_STRING((char*)(uintptr_t)semaphoreFilePath); /* dirty cast */
+            UA_STRING((char *)(uintptr_t)semaphoreFilePath); /* dirty cast */
 #else
         UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_CLIENT,
                        "Ignoring semaphore file path. open62541 not compiled "
@@ -52,7 +53,8 @@ register_server_with_discovery_server(UA_Server *server,
     request.server.discoveryUrlsSize = total_discurls;
 
     for(size_t i = 0; i < config_discurls; ++i)
-        request.server.discoveryUrls[i] = server->config.applicationDescription.discoveryUrls[i];
+        request.server.discoveryUrls[i] =
+            server->config.applicationDescription.discoveryUrls[i];
 
     /* TODO: Add nl only if discoveryUrl not already present */
     for(size_t i = 0; i < nl_discurls; ++i) {
@@ -67,7 +69,8 @@ register_server_with_discovery_server(UA_Server *server,
     request.discoveryConfiguration = UA_ExtensionObject_new();
     UA_ExtensionObject_init(&request.discoveryConfiguration[0]);
     request.discoveryConfiguration[0].encoding = UA_EXTENSIONOBJECT_DECODED_NODELETE;
-    request.discoveryConfiguration[0].content.decoded.type = &UA_TYPES[UA_TYPES_MDNSDISCOVERYCONFIGURATION];
+    request.discoveryConfiguration[0].content.decoded.type =
+        &UA_TYPES[UA_TYPES_MDNSDISCOVERYCONFIGURATION];
     request.discoveryConfiguration[0].content.decoded.data = &mdnsConfig;
 
     mdnsConfig.mdnsServerName = server->config.mdnsServerName;
@@ -95,8 +98,7 @@ register_server_with_discovery_server(UA_Server *server,
         UA_RegisterServerResponse response_fallback;
 
         __UA_Client_Service(client, &request_fallback,
-                            &UA_TYPES[UA_TYPES_REGISTERSERVERREQUEST],
-                            &response_fallback,
+                            &UA_TYPES[UA_TYPES_REGISTERSERVERREQUEST], &response_fallback,
                             &UA_TYPES[UA_TYPES_REGISTERSERVERRESPONSE]);
 
         serviceResult = response_fallback.responseHeader.serviceResult;
@@ -114,15 +116,14 @@ register_server_with_discovery_server(UA_Server *server,
 
 UA_StatusCode
 UA_Server_register_discovery(UA_Server *server, UA_Client *client,
-                             const char* semaphoreFilePath) {
-    return register_server_with_discovery_server(server, client,
-                                                 false, semaphoreFilePath);
+                             const char *semaphoreFilePath) {
+    return register_server_with_discovery_server(server, client, false,
+                                                 semaphoreFilePath);
 }
 
 UA_StatusCode
 UA_Server_unregister_discovery(UA_Server *server, UA_Client *client) {
-    return register_server_with_discovery_server(server, client,
-                                                 true, NULL);
+    return register_server_with_discovery_server(server, client, true, NULL);
 }
 
 #endif /* UA_ENABLE_DISCOVERY */

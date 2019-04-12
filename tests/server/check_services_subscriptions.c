@@ -2,20 +2,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "ua_server.h"
-#include "server/ua_services.h"
-#include "server/ua_server_internal.h"
-#include "server/ua_subscription.h"
-#include "ua_config_default.h"
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
 
-#include "check.h"
+#include "server/ua_server_internal.h"
+#include "server/ua_services.h"
+#include "server/ua_subscription.h"
+
+#include <check.h>
+
 #include "testing_clock.h"
 
 static UA_Server *server = NULL;
 static UA_ServerConfig *config = NULL;
 static UA_Session *session = NULL;
 
-UA_UInt32 monitored = 0; /* Number of active MonitoredItems */
+static UA_UInt32 monitored = 0; /* Number of active MonitoredItems */
 
 static void
 monitoredRegisterCallback(UA_Server *s,
@@ -56,8 +58,8 @@ static void teardown(void) {
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS
 
-UA_UInt32 subscriptionId;
-UA_UInt32 monitoredItemId;
+static UA_UInt32 subscriptionId;
+static UA_UInt32 monitoredItemId;
 
 static void
 createSubscription(void) {

@@ -2,14 +2,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <open62541/client_config_default.h>
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
+
+#include "server/ua_server_internal.h"
+#include "ua_network_tcp.h"
+
+#include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <server/ua_server_internal.h>
 
-#include "check.h"
-#include "ua_server.h"
-#include "ua_config_default.h"
-#include "ua_network_tcp.h"
 #include "thread_wrapper.h"
 
 UA_Server *server_translate_browse;

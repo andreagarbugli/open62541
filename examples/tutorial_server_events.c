@@ -1,9 +1,9 @@
 /* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
  * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. */
 
-#include <ua_server.h>
-#include <ua_config_default.h>
-#include <ua_log_stdout.h>
+#include <open62541/plugin/log_stdout.h>
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
 
 #include <signal.h>
 #include <stdlib.h>
@@ -62,7 +62,7 @@ setUpEvent(UA_Server *server, UA_NodeId *outId) {
     UA_DateTime eventTime = UA_DateTime_now();
     UA_Server_writeObjectProperty_scalar(server, *outId, UA_QUALIFIEDNAME(0, "Time"),
                                          &eventTime, &UA_TYPES[UA_TYPES_DATETIME]);
-												 
+
     UA_UInt16 eventSeverity = 100;
     UA_Server_writeObjectProperty_scalar(server, *outId, UA_QUALIFIEDNAME(0, "Severity"),
                                          &eventSeverity, &UA_TYPES[UA_TYPES_UINT16]);

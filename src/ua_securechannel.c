@@ -11,26 +11,28 @@
  *    Copyright 2017-2018 (c) Mark Giraud, Fraunhofer IOSB
  */
 
-#include "ua_util_internal.h"
 #include "ua_securechannel.h"
-#include "ua_types_encoding_binary.h"
-#include "ua_types_generated_encoding_binary.h"
-#include "ua_transport_generated_encoding_binary.h"
-#include "ua_types_generated_handling.h"
-#include "ua_transport_generated_handling.h"
-#include "ua_plugin_securitypolicy.h"
 
-#define UA_BITMASK_MESSAGETYPE 0x00ffffff
-#define UA_BITMASK_CHUNKTYPE 0xff000000
+#include <open62541/plugin/securitypolicy.h>
+#include <open62541/transport_generated_encoding_binary.h>
+#include <open62541/transport_generated_handling.h>
+#include <open62541/types_generated_encoding_binary.h>
+#include <open62541/types_generated_handling.h>
+
+#include "ua_types_encoding_binary.h"
+#include "ua_util_internal.h"
+
+#define UA_BITMASK_MESSAGETYPE 0x00ffffffu
+#define UA_BITMASK_CHUNKTYPE 0xff000000u
 #define UA_ASYMMETRIC_ALG_SECURITY_HEADER_FIXED_LENGTH 12
 #define UA_SYMMETRIC_ALG_SECURITY_HEADER_LENGTH 4
 #define UA_SEQUENCE_HEADER_LENGTH 8
-#define UA_SECUREMH_AND_SYMALGH_LENGTH              \
-    (UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH + \
-    UA_SYMMETRIC_ALG_SECURITY_HEADER_LENGTH)
+#define UA_SECUREMH_AND_SYMALGH_LENGTH                                                   \
+    (UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH +                                      \
+     UA_SYMMETRIC_ALG_SECURITY_HEADER_LENGTH)
 
-const UA_ByteString UA_SECURITY_POLICY_NONE_URI =
-    {47, (UA_Byte *)"http://opcfoundation.org/UA/SecurityPolicy#None"};
+const UA_ByteString UA_SECURITY_POLICY_NONE_URI = {
+    47, (UA_Byte *)"http://opcfoundation.org/UA/SecurityPolicy#None"};
 
 #ifdef UA_ENABLE_UNIT_TEST_FAILURE_HOOKS
 UA_StatusCode decrypt_verifySignatureFailure;
@@ -51,14 +53,16 @@ UA_SecureChannel_setSecurityPolicy(UA_SecureChannel *channel,
                                    const UA_SecurityPolicy *securityPolicy,
                                    const UA_ByteString *remoteCertificate) {
     /* Is a policy already configured? */
-    if(channel->securityPolicy)
+    if(channel->securityPolicy) {
+        UA_LOG_ERROR(securityPolicy->logger, UA_LOGCATEGORY_SECURITYPOLICY,
+                     "Security policy already configured");
         return UA_STATUSCODE_BADINTERNALERROR;
+    }
 
     UA_StatusCode retval;
     if(securityPolicy->certificateVerification != NULL) {
-        retval = securityPolicy->certificateVerification->
-            verifyCertificate(securityPolicy->certificateVerification->context,
-                              remoteCertificate);
+        retval = securityPolicy->certificateVerification->verifyCertificate(
+            securityPolicy->certificateVerification->context, remoteCertificate);
 
         if(retval != UA_STATUSCODE_GOOD)
             return retval;
@@ -67,8 +71,8 @@ UA_SecureChannel_setSecurityPolicy(UA_SecureChannel *channel,
                        "No PKI plugin set. Accepting all certificates");
     }
 
-    retval = securityPolicy->channelModule.
-        newContext(securityPolicy, remoteCertificate, &channel->channelContext);
+    retval = securityPolicy->channelModule.newContext(securityPolicy, remoteCertificate,
+                                                      &channel->channelContext);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -76,10 +80,10 @@ UA_SecureChannel_setSecurityPolicy(UA_SecureChannel *channel,
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    UA_ByteString remoteCertificateThumbprint = {20, channel->remoteCertificateThumbprint};
-    retval = securityPolicy->asymmetricModule.
-        makeCertificateThumbprint(securityPolicy, &channel->remoteCertificate,
-                                  &remoteCertificateThumbprint);
+    UA_ByteString remoteCertificateThumbprint = {20,
+                                                 channel->remoteCertificateThumbprint};
+    retval = securityPolicy->asymmetricModule.makeCertificateThumbprint(
+        securityPolicy, &channel->remoteCertificate, &remoteCertificateThumbprint);
 
     if(retval == UA_STATUSCODE_GOOD)
         channel->securityPolicy = securityPolicy;
@@ -168,16 +172,18 @@ UA_SecureChannel_generateLocalNonce(UA_SecureChannel *channel) {
         return UA_STATUSCODE_BADINTERNALERROR;
 
     /* Is the length of the previous nonce correct? */
-    size_t nonceLength = channel->securityPolicy->symmetricModule.secureChannelNonceLength;
+    size_t nonceLength =
+        channel->securityPolicy->symmetricModule.secureChannelNonceLength;
     if(channel->localNonce.length != nonceLength) {
         UA_ByteString_deleteMembers(&channel->localNonce);
-        UA_StatusCode retval = UA_ByteString_allocBuffer(&channel->localNonce, nonceLength);
+        UA_StatusCode retval =
+            UA_ByteString_allocBuffer(&channel->localNonce, nonceLength);
         if(retval != UA_STATUSCODE_GOOD)
             return retval;
     }
 
-    return channel->securityPolicy->symmetricModule.
-        generateNonce(channel->securityPolicy, &channel->localNonce);
+    return channel->securityPolicy->symmetricModule.generateNonce(channel->securityPolicy,
+                                                                  &channel->localNonce);
 }
 
 static UA_StatusCode
@@ -185,38 +191,40 @@ UA_SecureChannel_generateLocalKeys(const UA_SecureChannel *const channel,
                                    const UA_SecurityPolicy *const securityPolicy) {
     UA_LOG_TRACE_CHANNEL(securityPolicy->logger, channel, "Generating new local keys");
     const UA_SecurityPolicyChannelModule *channelModule = &securityPolicy->channelModule;
-    const UA_SecurityPolicySymmetricModule *symmetricModule = &securityPolicy->symmetricModule;
+    const UA_SecurityPolicySymmetricModule *symmetricModule =
+        &securityPolicy->symmetricModule;
     const UA_SecurityPolicyCryptoModule *const cryptoModule =
         &securityPolicy->symmetricModule.cryptoModule;
 
     /* Symmetric key length */
-    size_t encryptionKeyLength =
-        cryptoModule->encryptionAlgorithm.getLocalKeyLength(securityPolicy, channel->channelContext);
-    size_t encryptionBlockSize =
-        cryptoModule->encryptionAlgorithm.getLocalBlockSize(securityPolicy, channel->channelContext);
-    size_t signingKeyLength =
-        cryptoModule->signatureAlgorithm.getLocalKeyLength(securityPolicy, channel->channelContext);
+    size_t encryptionKeyLength = cryptoModule->encryptionAlgorithm.getLocalKeyLength(
+        securityPolicy, channel->channelContext);
+    size_t encryptionBlockSize = cryptoModule->encryptionAlgorithm.getLocalBlockSize(
+        securityPolicy, channel->channelContext);
+    size_t signingKeyLength = cryptoModule->signatureAlgorithm.getLocalKeyLength(
+        securityPolicy, channel->channelContext);
     const size_t bufSize = encryptionBlockSize + signingKeyLength + encryptionKeyLength;
     UA_STACKARRAY(UA_Byte, bufBytes, bufSize);
     UA_ByteString buffer = {bufSize, bufBytes};
 
     /* Local keys */
-    UA_StatusCode retval = symmetricModule->generateKey(securityPolicy, &channel->remoteNonce,
-                                                        &channel->localNonce, &buffer);
+    UA_StatusCode retval = symmetricModule->generateKey(
+        securityPolicy, &channel->remoteNonce, &channel->localNonce, &buffer);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
     const UA_ByteString localSigningKey = {signingKeyLength, buffer.data};
     const UA_ByteString localEncryptingKey = {encryptionKeyLength,
                                               buffer.data + signingKeyLength};
     const UA_ByteString localIv = {encryptionBlockSize,
-                                   buffer.data + signingKeyLength +
-                                   encryptionKeyLength};
+                                   buffer.data + signingKeyLength + encryptionKeyLength};
 
-    retval = channelModule->setLocalSymSigningKey(channel->channelContext, &localSigningKey);
+    retval =
+        channelModule->setLocalSymSigningKey(channel->channelContext, &localSigningKey);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    retval = channelModule->setLocalSymEncryptingKey(channel->channelContext, &localEncryptingKey);
+    retval = channelModule->setLocalSymEncryptingKey(channel->channelContext,
+                                                     &localEncryptingKey);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -232,24 +240,25 @@ UA_SecureChannel_generateRemoteKeys(const UA_SecureChannel *const channel,
                                     const UA_SecurityPolicy *const securityPolicy) {
     UA_LOG_TRACE_CHANNEL(securityPolicy->logger, channel, "Generating new remote keys");
     const UA_SecurityPolicyChannelModule *channelModule = &securityPolicy->channelModule;
-    const UA_SecurityPolicySymmetricModule *symmetricModule = &securityPolicy->symmetricModule;
+    const UA_SecurityPolicySymmetricModule *symmetricModule =
+        &securityPolicy->symmetricModule;
     const UA_SecurityPolicyCryptoModule *const cryptoModule =
         &securityPolicy->symmetricModule.cryptoModule;
 
     /* Symmetric key length */
-    size_t encryptionKeyLength =
-        cryptoModule->encryptionAlgorithm.getRemoteKeyLength(securityPolicy, channel->channelContext);
-    size_t encryptionBlockSize =
-        cryptoModule->encryptionAlgorithm.getRemoteBlockSize(securityPolicy, channel->channelContext);
-    size_t signingKeyLength =
-        cryptoModule->signatureAlgorithm.getRemoteKeyLength(securityPolicy, channel->channelContext);
+    size_t encryptionKeyLength = cryptoModule->encryptionAlgorithm.getRemoteKeyLength(
+        securityPolicy, channel->channelContext);
+    size_t encryptionBlockSize = cryptoModule->encryptionAlgorithm.getRemoteBlockSize(
+        securityPolicy, channel->channelContext);
+    size_t signingKeyLength = cryptoModule->signatureAlgorithm.getRemoteKeyLength(
+        securityPolicy, channel->channelContext);
     const size_t bufSize = encryptionBlockSize + signingKeyLength + encryptionKeyLength;
     UA_STACKARRAY(UA_Byte, bufBytes, bufSize);
     UA_ByteString buffer = {bufSize, bufBytes};
 
     /* Remote keys */
-    UA_StatusCode retval = symmetricModule->generateKey(securityPolicy, &channel->localNonce,
-                                                        &channel->remoteNonce, &buffer);
+    UA_StatusCode retval = symmetricModule->generateKey(
+        securityPolicy, &channel->localNonce, &channel->remoteNonce, &buffer);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -257,14 +266,15 @@ UA_SecureChannel_generateRemoteKeys(const UA_SecureChannel *const channel,
     const UA_ByteString remoteEncryptingKey = {encryptionKeyLength,
                                                buffer.data + signingKeyLength};
     const UA_ByteString remoteIv = {encryptionBlockSize,
-                                    buffer.data + signingKeyLength +
-                                    encryptionKeyLength};
+                                    buffer.data + signingKeyLength + encryptionKeyLength};
 
-    retval = channelModule->setRemoteSymSigningKey(channel->channelContext, &remoteSigningKey);
+    retval =
+        channelModule->setRemoteSymSigningKey(channel->channelContext, &remoteSigningKey);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    retval = channelModule->setRemoteSymEncryptingKey(channel->channelContext, &remoteEncryptingKey);
+    retval = channelModule->setRemoteSymEncryptingKey(channel->channelContext,
+                                                      &remoteEncryptingKey);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -279,12 +289,18 @@ UA_StatusCode
 UA_SecureChannel_generateNewKeys(UA_SecureChannel *channel) {
     UA_StatusCode retval =
         UA_SecureChannel_generateLocalKeys(channel, channel->securityPolicy);
-    if(retval != UA_STATUSCODE_GOOD)
+    if(retval != UA_STATUSCODE_GOOD) {
+        UA_LOG_ERROR(channel->securityPolicy->logger, UA_LOGCATEGORY_SECURECHANNEL,
+                     "Could not generate a local key");
         return retval;
+    }
 
     retval = UA_SecureChannel_generateRemoteKeys(channel, channel->securityPolicy);
-    if(retval != UA_STATUSCODE_GOOD)
+    if(retval != UA_STATUSCODE_GOOD) {
+        UA_LOG_ERROR(channel->securityPolicy->logger, UA_LOGCATEGORY_SECURECHANNEL,
+                     "Could not generate a remote key");
         return retval;
+    }
 
     return retval;
 }
@@ -302,12 +318,13 @@ UA_SecureChannel_getSession(UA_SecureChannel *channel,
 
 UA_StatusCode
 UA_SecureChannel_revolveTokens(UA_SecureChannel *channel) {
-    if(channel->nextSecurityToken.tokenId == 0) // no security token issued
+    if(channel->nextSecurityToken.tokenId == 0)  // no security token issued
         return UA_STATUSCODE_BADSECURECHANNELTOKENUNKNOWN;
 
-    //FIXME: not thread-safe ???? Why is this not thread safe?
+    // FIXME: not thread-safe ???? Why is this not thread safe?
     UA_ChannelSecurityToken_deleteMembers(&channel->previousSecurityToken);
-    UA_ChannelSecurityToken_copy(&channel->securityToken, &channel->previousSecurityToken);
+    UA_ChannelSecurityToken_copy(&channel->securityToken,
+                                 &channel->previousSecurityToken);
 
     UA_ChannelSecurityToken_deleteMembers(&channel->securityToken);
     UA_ChannelSecurityToken_copy(&channel->nextSecurityToken, &channel->securityToken);
@@ -343,15 +360,16 @@ prependHeadersAsym(UA_SecureChannel *const channel, UA_Byte *header_pos,
                    size_t *const finalLength) {
     UA_StatusCode retval;
     size_t dataToEncryptLength =
-        totalLength - (UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH + securityHeaderLength);
+        totalLength -
+        (UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH + securityHeaderLength);
 
     UA_SecureConversationMessageHeader respHeader;
-    respHeader.messageHeader.messageTypeAndChunkType = UA_MESSAGETYPE_OPN + UA_CHUNKTYPE_FINAL;
-    respHeader.messageHeader.messageSize = (UA_UInt32)
-        (totalLength +
-         UA_SecurityPolicy_getRemoteAsymEncryptionBufferLengthOverhead(channel->securityPolicy,
-                                                                       channel->channelContext,
-                                                                       dataToEncryptLength));
+    respHeader.messageHeader.messageTypeAndChunkType =
+        UA_MESSAGETYPE_OPN + UA_CHUNKTYPE_FINAL;
+    respHeader.messageHeader.messageSize = (UA_UInt32)(
+        totalLength +
+        UA_SecurityPolicy_getRemoteAsymEncryptionBufferLengthOverhead(
+            channel->securityPolicy, channel->channelContext, dataToEncryptLength));
     respHeader.secureChannelId = channel->securityToken.channelId;
     retval = UA_encodeBinary(&respHeader,
                              &UA_TRANSPORT[UA_TRANSPORT_SECURECONVERSATIONMESSAGEHEADER],
@@ -366,11 +384,12 @@ prependHeadersAsym(UA_SecureChannel *const channel, UA_Byte *header_pos,
        channel->securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT) {
         asymHeader.senderCertificate = channel->securityPolicy->localCertificate;
         asymHeader.receiverCertificateThumbprint.length = 20;
-        asymHeader.receiverCertificateThumbprint.data = channel->remoteCertificateThumbprint;
+        asymHeader.receiverCertificateThumbprint.data =
+            channel->remoteCertificateThumbprint;
     }
-    retval = UA_encodeBinary(&asymHeader,
-                             &UA_TRANSPORT[UA_TRANSPORT_ASYMMETRICALGORITHMSECURITYHEADER],
-                             &header_pos, &buf_end, NULL, NULL);
+    retval = UA_encodeBinary(
+        &asymHeader, &UA_TRANSPORT[UA_TRANSPORT_ASYMMETRICALGORITHMSECURITYHEADER],
+        &header_pos, &buf_end, NULL, NULL);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -400,15 +419,16 @@ hideBytesAsym(const UA_SecureChannel *channel, UA_Byte **buf_start,
     const UA_SecurityPolicy *securityPolicy = channel->securityPolicy;
 
     /* Hide bytes for signature and padding */
-    size_t potentialEncryptMaxSize = (size_t)(*buf_end - *buf_start) + UA_SEQUENCE_HEADER_LENGTH;
-    *buf_end -= securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm.
-        getLocalSignatureSize(securityPolicy, channel->channelContext);
+    size_t potentialEncryptMaxSize =
+        (size_t)(*buf_end - *buf_start) + UA_SEQUENCE_HEADER_LENGTH;
+    *buf_end -= securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm
+                    .getLocalSignatureSize(securityPolicy, channel->channelContext);
     *buf_end -= 2; /* padding byte and extraPadding byte */
 
-    /* Add some overhead length due to RSA implementations adding a signature themselves */
-    *buf_end -= UA_SecurityPolicy_getRemoteAsymEncryptionBufferLengthOverhead(securityPolicy,
-                                                                              channel->channelContext,
-                                                                              potentialEncryptMaxSize);
+    /* Add some overhead length due to RSA implementations adding a signature themselves
+     */
+    *buf_end -= UA_SecurityPolicy_getRemoteAsymEncryptionBufferLengthOverhead(
+        securityPolicy, channel->channelContext, potentialEncryptMaxSize);
 #endif
 }
 
@@ -432,28 +452,32 @@ padChunkAsym(UA_SecureChannel *channel, const UA_ByteString *const buf,
         (uintptr_t)*buf_pos - (uintptr_t)buf_body_start + UA_SEQUENCE_HEADER_LENGTH;
 
     /* Compute the padding length */
-    size_t plainTextBlockSize = securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm.
-        getRemotePlainTextBlockSize(securityPolicy, channel->channelContext);
-    size_t signatureSize = securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm.
-        getLocalSignatureSize(securityPolicy, channel->channelContext);
+    size_t plainTextBlockSize =
+        securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm
+            .getRemotePlainTextBlockSize(securityPolicy, channel->channelContext);
+    size_t signatureSize =
+        securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm
+            .getLocalSignatureSize(securityPolicy, channel->channelContext);
     size_t paddingBytes = 1;
-    if(securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm.
-        getRemoteKeyLength(securityPolicy, channel->channelContext) > 2048)
+    if(securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm
+           .getRemoteKeyLength(securityPolicy, channel->channelContext) > 2048)
         ++paddingBytes; /* extra padding */
     size_t totalPaddingSize =
-        (plainTextBlockSize - ((bytesToWrite + signatureSize + paddingBytes) % plainTextBlockSize));
+        (plainTextBlockSize -
+         ((bytesToWrite + signatureSize + paddingBytes) % plainTextBlockSize));
 
-    /* Write the padding. This is <= because the paddingSize byte also has to be written */
-    UA_Byte paddingSize = (UA_Byte)(totalPaddingSize & 0xff);
+    /* Write the padding. This is <= because the paddingSize byte also has to be written
+     */
+    UA_Byte paddingSize = (UA_Byte)(totalPaddingSize & 0xffu);
     for(UA_UInt16 i = 0; i <= totalPaddingSize; ++i) {
         **buf_pos = paddingSize;
         ++*buf_pos;
     }
 
     /* Write the extra padding byte if required */
-    if(securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm.
-       getRemoteKeyLength(securityPolicy, channel->channelContext) > 2048) {
-        UA_Byte extraPaddingSize = (UA_Byte)(totalPaddingSize >> 8);
+    if(securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm
+           .getRemoteKeyLength(securityPolicy, channel->channelContext) > 2048) {
+        UA_Byte extraPaddingSize = (UA_Byte)(totalPaddingSize >> 8u);
         **buf_pos = extraPaddingSize;
         ++*buf_pos;
     }
@@ -461,21 +485,21 @@ padChunkAsym(UA_SecureChannel *channel, const UA_ByteString *const buf,
 
 static UA_StatusCode
 signAndEncryptAsym(UA_SecureChannel *const channel, size_t preSignLength,
-                   UA_ByteString *buf, size_t securityHeaderLength,
-                   size_t totalLength) {
+                   UA_ByteString *buf, size_t securityHeaderLength, size_t totalLength) {
     if(channel->securityMode != UA_MESSAGESECURITYMODE_SIGN &&
        channel->securityMode != UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
         return UA_STATUSCODE_GOOD;
 
     const UA_SecurityPolicy *const securityPolicy = channel->securityPolicy;
-    
+
     /* Sign message */
     const UA_ByteString dataToSign = {preSignLength, buf->data};
-    size_t sigsize = securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm.
-        getLocalSignatureSize(securityPolicy, channel->channelContext);
+    size_t sigsize = securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm
+                         .getLocalSignatureSize(securityPolicy, channel->channelContext);
     UA_ByteString signature = {sigsize, buf->data + preSignLength};
-    UA_StatusCode retval = securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm.
-        sign(securityPolicy, channel->channelContext, &dataToSign, &signature);
+    UA_StatusCode retval =
+        securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm.sign(
+            securityPolicy, channel->channelContext, &dataToSign, &signature);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -486,16 +510,16 @@ signAndEncryptAsym(UA_SecureChannel *const channel, size_t preSignLength,
         UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH + securityHeaderLength;
     UA_ByteString dataToEncrypt = {totalLength - unencrypted_length,
                                    &buf->data[unencrypted_length]};
-    return securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm.
-        encrypt(securityPolicy, channel->channelContext, &dataToEncrypt);
+    return securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm.encrypt(
+        securityPolicy, channel->channelContext, &dataToEncrypt);
 }
 
 #endif /* UA_ENABLE_ENCRYPTION */
 
 /* Sends an OPN message using asymmetric encryption if defined */
 UA_StatusCode
-UA_SecureChannel_sendAsymmetricOPNMessage(UA_SecureChannel *channel,
-                                          UA_UInt32 requestId, const void *content,
+UA_SecureChannel_sendAsymmetricOPNMessage(UA_SecureChannel *channel, UA_UInt32 requestId,
+                                          const void *content,
                                           const UA_DataType *contentType) {
     if(channel->securityMode == UA_MESSAGESECURITYMODE_INVALID)
         return UA_STATUSCODE_BADSECURITYMODEREJECTED;
@@ -519,10 +543,9 @@ UA_SecureChannel_sendAsymmetricOPNMessage(UA_SecureChannel *channel,
 
     /* Encode the message type and content */
     UA_NodeId typeId = UA_NODEID_NUMERIC(0, contentType->binaryEncodingId);
-    retval |= UA_encodeBinary(&typeId, &UA_TYPES[UA_TYPES_NODEID],
-                              &buf_pos, &buf_end, NULL, NULL);
-    retval |= UA_encodeBinary(content, contentType,
-                              &buf_pos, &buf_end, NULL, NULL);
+    retval |= UA_encodeBinary(&typeId, &UA_TYPES[UA_TYPES_NODEID], &buf_pos, &buf_end,
+                              NULL, NULL);
+    retval |= UA_encodeBinary(content, contentType, &buf_pos, &buf_end, NULL, NULL);
     if(retval != UA_STATUSCODE_GOOD) {
         connection->releaseSendBuffer(connection, &buf);
         return retval;
@@ -540,8 +563,9 @@ UA_SecureChannel_sendAsymmetricOPNMessage(UA_SecureChannel *channel,
     size_t total_length = pre_sig_length;
     if(channel->securityMode == UA_MESSAGESECURITYMODE_SIGN ||
        channel->securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
-        total_length += securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm.
-            getLocalSignatureSize(securityPolicy, channel->channelContext);
+        total_length +=
+            securityPolicy->asymmetricModule.cryptoModule.signatureAlgorithm
+                .getLocalSignatureSize(securityPolicy, channel->channelContext);
 
     /* The total message length is known here which is why we encode the headers
      * at this step and not earlier. */
@@ -552,7 +576,8 @@ UA_SecureChannel_sendAsymmetricOPNMessage(UA_SecureChannel *channel,
         goto error;
 
 #ifdef UA_ENABLE_ENCRYPTION
-    retval = signAndEncryptAsym(channel, pre_sig_length, &buf, securityHeaderLength, total_length);
+    retval = signAndEncryptAsym(channel, pre_sig_length, &buf, securityHeaderLength,
+                                total_length);
     if(retval != UA_STATUSCODE_GOOD)
         goto error;
 #endif
@@ -578,16 +603,18 @@ error:
 
 static UA_UInt16
 calculatePaddingSym(const UA_SecurityPolicy *securityPolicy, const void *channelContext,
-                    size_t bytesToWrite, UA_Byte *paddingSize, UA_Byte *extraPaddingSize) {
-    size_t encryptionBlockSize = securityPolicy->symmetricModule.cryptoModule.
-        encryptionAlgorithm.getLocalBlockSize(securityPolicy, channelContext);
-    size_t signatureSize = securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm.
-        getLocalSignatureSize(securityPolicy, channelContext);
+                    size_t bytesToWrite, UA_Byte *paddingSize,
+                    UA_Byte *extraPaddingSize) {
+    size_t encryptionBlockSize =
+        securityPolicy->symmetricModule.cryptoModule.encryptionAlgorithm
+            .getLocalBlockSize(securityPolicy, channelContext);
+    size_t signatureSize = securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm
+                               .getLocalSignatureSize(securityPolicy, channelContext);
 
     size_t padding = (encryptionBlockSize -
                       ((bytesToWrite + signatureSize + 1) % encryptionBlockSize));
     *paddingSize = (UA_Byte)padding;
-    *extraPaddingSize = (UA_Byte)(padding >> 8);
+    *extraPaddingSize = (UA_Byte)(padding >> 8u);
     return (UA_UInt16)padding;
 }
 
@@ -603,10 +630,9 @@ padChunkSym(UA_MessageContext *messageContext, size_t bodyLength) {
     size_t bytesToWrite = bodyLength + UA_SEQUENCE_HEADER_LENGTH;
     UA_Byte paddingSize = 0;
     UA_Byte extraPaddingSize = 0;
-    UA_UInt16 totalPaddingSize =
-        calculatePaddingSym(messageContext->channel->securityPolicy,
-                            messageContext->channel->channelContext,
-                            bytesToWrite, &paddingSize, &extraPaddingSize);
+    UA_UInt16 totalPaddingSize = calculatePaddingSym(
+        messageContext->channel->securityPolicy, messageContext->channel->channelContext,
+        bytesToWrite, &paddingSize, &extraPaddingSize);
 
     /* This is <= because the paddingSize byte also has to be written. */
     for(UA_UInt16 i = 0; i <= totalPaddingSize; ++i) {
@@ -630,12 +656,13 @@ signChunkSym(UA_MessageContext *const messageContext, size_t preSigLength) {
     UA_ByteString dataToSign = messageContext->messageBuffer;
     dataToSign.length = preSigLength;
     UA_ByteString signature;
-    signature.length = securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm.
-        getLocalSignatureSize(securityPolicy, channel->channelContext);
+    signature.length =
+        securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm
+            .getLocalSignatureSize(securityPolicy, channel->channelContext);
     signature.data = messageContext->buf_pos;
 
-    return securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm.
-        sign(securityPolicy, channel->channelContext, &dataToSign, &signature);
+    return securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm.sign(
+        securityPolicy, channel->channelContext, &dataToSign, &signature);
 }
 
 static UA_StatusCode
@@ -643,14 +670,15 @@ encryptChunkSym(UA_MessageContext *const messageContext, size_t totalLength) {
     const UA_SecureChannel *channel = messageContext->channel;
     if(channel->securityMode != UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
         return UA_STATUSCODE_GOOD;
-        
+
     UA_ByteString dataToEncrypt;
-    dataToEncrypt.data = messageContext->messageBuffer.data + UA_SECUREMH_AND_SYMALGH_LENGTH;
+    dataToEncrypt.data =
+        messageContext->messageBuffer.data + UA_SECUREMH_AND_SYMALGH_LENGTH;
     dataToEncrypt.length = totalLength - UA_SECUREMH_AND_SYMALGH_LENGTH;
 
     const UA_SecurityPolicy *securityPolicy = channel->securityPolicy;
-    return securityPolicy->symmetricModule.cryptoModule.encryptionAlgorithm.
-        encrypt(securityPolicy, channel->channelContext, &dataToEncrypt);
+    return securityPolicy->symmetricModule.cryptoModule.encryptionAlgorithm.encrypt(
+        securityPolicy, channel->channelContext, &dataToEncrypt);
 }
 
 #endif /* UA_ENABLE_ENCRYPTION */
@@ -672,8 +700,9 @@ setBufPos(UA_MessageContext *mc) {
      * if the chunk is encrypted. */
     if(channel->securityMode == UA_MESSAGESECURITYMODE_SIGN ||
        channel->securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
-        mc->buf_end -= securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm.
-            getLocalSignatureSize(securityPolicy, channel->channelContext);
+        mc->buf_end -=
+            securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm
+                .getLocalSignatureSize(securityPolicy, channel->channelContext);
 
     /* The size of the padding depends on the amount of data that shall be sent
      * and is unknown at this point. Reserve space for the PaddingSize byte,
@@ -684,17 +713,18 @@ setBufPos(UA_MessageContext *mc) {
      * calculatePaddingSym(). */
     if(channel->securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT) {
         /* PaddingSize and ExtraPaddingSize fields */
-        size_t encryptionBlockSize = securityPolicy->symmetricModule.cryptoModule.
-            encryptionAlgorithm.getLocalBlockSize(securityPolicy, channel->channelContext);
-        mc->buf_end -= 1 + ((encryptionBlockSize >> 8) ? 1 : 0);
+        size_t encryptionBlockSize =
+            securityPolicy->symmetricModule.cryptoModule.encryptionAlgorithm
+                .getLocalBlockSize(securityPolicy, channel->channelContext);
+        mc->buf_end -= 1 + ((encryptionBlockSize >> 8u) ? 1 : 0);
 
         /* Reduce the message body size with the remainder of the operation
          * maxEncryptedDataSize modulo EncryptionBlockSize to get a whole
          * number of blocks to encrypt later. Also reserve one byte for
          * padding (1 <= paddingSize <= encryptionBlockSize). */
         size_t maxEncryptDataSize = mc->messageBuffer.length -
-            UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH -
-            UA_SYMMETRIC_ALG_SECURITY_HEADER_LENGTH;
+                                    UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH -
+                                    UA_SYMMETRIC_ALG_SECURITY_HEADER_LENGTH;
         mc->buf_end -= (maxEncryptDataSize % encryptionBlockSize) + 1;
     }
 #endif
@@ -707,7 +737,8 @@ checkLimitsSym(UA_MessageContext *const messageContext, size_t *const bodyLength
     if(!connection)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    UA_Byte *buf_body_start = messageContext->messageBuffer.data + UA_SECURE_MESSAGE_HEADER_LENGTH;
+    UA_Byte *buf_body_start =
+        messageContext->messageBuffer.data + UA_SECURE_MESSAGE_HEADER_LENGTH;
     const UA_Byte *buf_body_end = messageContext->buf_pos;
     *bodyLength = (uintptr_t)buf_body_end - (uintptr_t)buf_body_start;
     messageContext->messageSizeSoFar += *bodyLength;
@@ -738,9 +769,9 @@ encodeHeadersSym(UA_MessageContext *const messageContext, size_t totalLength) {
     else
         respHeader.messageHeader.messageTypeAndChunkType += UA_CHUNKTYPE_INTERMEDIATE;
 
-    UA_StatusCode res =
-        UA_encodeBinary(&respHeader, &UA_TRANSPORT[UA_TRANSPORT_SECURECONVERSATIONMESSAGEHEADER],
-                        &header_pos, &messageContext->buf_end, NULL, NULL);
+    UA_StatusCode res = UA_encodeBinary(
+        &respHeader, &UA_TRANSPORT[UA_TRANSPORT_SECURECONVERSATIONMESSAGEHEADER],
+        &header_pos, &messageContext->buf_end, NULL, NULL);
 
     UA_SymmetricAlgorithmSecurityHeader symSecHeader;
     symSecHeader.tokenId = channel->securityToken.tokenId;
@@ -759,7 +790,6 @@ encodeHeadersSym(UA_MessageContext *const messageContext, size_t totalLength) {
 
 static UA_StatusCode
 sendSymmetricChunk(UA_MessageContext *messageContext) {
-    UA_StatusCode res = UA_STATUSCODE_GOOD;
     UA_SecureChannel *const channel = messageContext->channel;
     const UA_SecurityPolicy *securityPolicy = channel->securityPolicy;
     UA_Connection *const connection = channel->connection;
@@ -767,23 +797,24 @@ sendSymmetricChunk(UA_MessageContext *messageContext) {
         return UA_STATUSCODE_BADINTERNALERROR;
 
     size_t bodyLength = 0;
-    res = checkLimitsSym(messageContext, &bodyLength);
+    UA_StatusCode res = checkLimitsSym(messageContext, &bodyLength);
     if(res != UA_STATUSCODE_GOOD)
         goto error;
 
-    /* Add padding */
+        /* Add padding */
 #ifdef UA_ENABLE_ENCRYPTION
     padChunkSym(messageContext, bodyLength);
 #endif
 
     /* The total message length */
     size_t pre_sig_length = (uintptr_t)(messageContext->buf_pos) -
-        (uintptr_t)messageContext->messageBuffer.data;
+                            (uintptr_t)messageContext->messageBuffer.data;
     size_t total_length = pre_sig_length;
     if(channel->securityMode == UA_MESSAGESECURITYMODE_SIGN ||
        channel->securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
-        total_length += securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm.
-            getLocalSignatureSize(securityPolicy, channel->channelContext);
+        total_length +=
+            securityPolicy->symmetricModule.cryptoModule.signatureAlgorithm
+                .getLocalSignatureSize(securityPolicy, channel->channelContext);
     /* Space for the padding and the signature have been reserved in setBufPos() */
     UA_assert(total_length <= connection->config.sendBufferSize);
 
@@ -863,9 +894,8 @@ UA_MessageContext_begin(UA_MessageContext *mc, UA_SecureChannel *channel,
     mc->messageType = messageType;
 
     /* Allocate the message buffer */
-    UA_StatusCode retval =
-        connection->getSendBuffer(connection, connection->config.sendBufferSize,
-                                  &mc->messageBuffer);
+    UA_StatusCode retval = connection->getSendBuffer(
+        connection, connection->config.sendBufferSize, &mc->messageBuffer);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -877,8 +907,9 @@ UA_MessageContext_begin(UA_MessageContext *mc, UA_SecureChannel *channel,
 UA_StatusCode
 UA_MessageContext_encode(UA_MessageContext *mc, const void *content,
                          const UA_DataType *contentType) {
-    UA_StatusCode retval = UA_encodeBinary(content, contentType, &mc->buf_pos, &mc->buf_end,
-                                           sendSymmetricEncodingCallback, mc);
+    UA_StatusCode retval =
+        UA_encodeBinary(content, contentType, &mc->buf_pos, &mc->buf_end,
+                        sendSymmetricEncodingCallback, mc);
     if(retval != UA_STATUSCODE_GOOD) {
         /* TODO: Send the abort message */
         if(mc->messageBuffer.length > 0) {
@@ -971,8 +1002,7 @@ addChunkPayload(UA_SecureChannel *channel, UA_UInt32 requestId,
     const UA_ConnectionConfig *config = &channel->connection->config;
     UA_assert(config != NULL); /* clang-analyzer false positive */
 
-    if(config->maxChunkCount > 0 &&
-       config->maxChunkCount <= latest->chunkPayloadsSize)
+    if(config->maxChunkCount > 0 && config->maxChunkCount <= latest->chunkPayloadsSize)
         return UA_STATUSCODE_BADRESPONSETOOLARGE;
 
     if(config->maxMessageSize > 0 &&
@@ -996,12 +1026,13 @@ addChunkPayload(UA_SecureChannel *channel, UA_UInt32 requestId,
 }
 
 static UA_StatusCode
-processMessage(UA_SecureChannel *channel, const UA_Message *message,
-               void *application, UA_ProcessMessageCallback callback) {
+processMessage(UA_SecureChannel *channel, const UA_Message *message, void *application,
+               UA_ProcessMessageCallback callback) {
     if(message->chunkPayloadsSize == 1) {
         /* No need to combine chunks */
         UA_ChunkPayload *cp = SIMPLEQ_FIRST(&message->chunkPayloads);
-        callback(application, channel, message->messageType, message->requestId, &cp->bytes);
+        callback(application, channel, message->messageType, message->requestId,
+                 &cp->bytes);
     } else {
         /* Allocate memory */
         UA_ByteString bytes;
@@ -1081,8 +1112,8 @@ decryptChunk(const UA_SecureChannel *const channel,
     /* Always decrypt opn messages if mode not none */
     if(channel->securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT ||
        messageType == UA_MESSAGETYPE_OPN) {
-        UA_StatusCode retval = cryptoModule->encryptionAlgorithm.
-            decrypt(channel->securityPolicy, channel->channelContext, &cipherText);
+        UA_StatusCode retval = cryptoModule->encryptionAlgorithm.decrypt(
+            channel->securityPolicy, channel->channelContext, &cipherText);
         *chunkSizeAfterDecryption -= (sizeBeforeDecryption - cipherText.length);
         if(retval != UA_STATUSCODE_GOOD) {
             return retval;
@@ -1104,16 +1135,17 @@ decodeChunkPaddingSize(const UA_SecureChannel *const channel,
                        size_t const chunkSizeAfterDecryption, size_t sigsize) {
     /* Is padding used? */
     if(channel->securityMode != UA_MESSAGESECURITYMODE_SIGNANDENCRYPT &&
-       !(messageType == UA_MESSAGETYPE_OPN && channel->securityMode > UA_MESSAGESECURITYMODE_NONE))
+       !(messageType == UA_MESSAGETYPE_OPN &&
+         channel->securityMode > UA_MESSAGESECURITYMODE_NONE))
         return 0;
 
     size_t paddingSize = chunk->data[chunkSizeAfterDecryption - sigsize - 1];
 
     /* Extra padding size */
-    size_t keyLength = cryptoModule->encryptionAlgorithm.
-        getRemoteKeyLength(channel->securityPolicy, channel->channelContext);
+    size_t keyLength = cryptoModule->encryptionAlgorithm.getRemoteKeyLength(
+        channel->securityPolicy, channel->channelContext);
     if(keyLength > 2048) {
-        paddingSize <<= 8;
+        paddingSize <<= 8u;
         paddingSize += 1;
         paddingSize += chunk->data[chunkSizeAfterDecryption - sigsize - 2];
     }
@@ -1131,16 +1163,18 @@ decodeChunkPaddingSize(const UA_SecureChannel *const channel,
 static UA_StatusCode
 verifyChunk(const UA_SecureChannel *const channel,
             const UA_SecurityPolicyCryptoModule *const cryptoModule,
-            const UA_ByteString *const chunk,
-            size_t const chunkSizeAfterDecryption, size_t sigsize) {
+            const UA_ByteString *const chunk, size_t const chunkSizeAfterDecryption,
+            size_t sigsize) {
     UA_LOG_TRACE_CHANNEL(channel->securityPolicy->logger, channel,
                          "Verifying chunk signature");
 
     /* Verify the signature */
-    const UA_ByteString chunkDataToVerify = {chunkSizeAfterDecryption - sigsize, chunk->data};
-    const UA_ByteString signature = {sigsize, chunk->data + chunkSizeAfterDecryption - sigsize};
-    UA_StatusCode retval = cryptoModule->signatureAlgorithm.
-        verify(channel->securityPolicy, channel->channelContext, &chunkDataToVerify, &signature);
+    const UA_ByteString chunkDataToVerify = {chunkSizeAfterDecryption - sigsize,
+                                             chunk->data};
+    const UA_ByteString signature = {sigsize,
+                                     chunk->data + chunkSizeAfterDecryption - sigsize};
+    UA_StatusCode retval = cryptoModule->signatureAlgorithm.verify(
+        channel->securityPolicy, channel->channelContext, &chunkDataToVerify, &signature);
 #ifdef UA_ENABLE_UNIT_TEST_FAILURE_HOOKS
     retval |= decrypt_verifySignatureFailure;
 #endif
@@ -1154,11 +1188,11 @@ static UA_StatusCode
 decryptAndVerifyChunk(const UA_SecureChannel *channel,
                       const UA_SecurityPolicyCryptoModule *cryptoModule,
                       UA_MessageType messageType, const UA_ByteString *chunk,
-                      size_t offset, UA_UInt32 *requestId,
-                      UA_UInt32 *sequenceNumber, UA_ByteString *payload) {
+                      size_t offset, UA_UInt32 *requestId, UA_UInt32 *sequenceNumber,
+                      UA_ByteString *payload) {
     size_t chunkSizeAfterDecryption = chunk->length;
-    UA_StatusCode retval = decryptChunk(channel, cryptoModule, messageType,
-                                        chunk, offset, &chunkSizeAfterDecryption);
+    UA_StatusCode retval = decryptChunk(channel, cryptoModule, messageType, chunk, offset,
+                                        &chunkSizeAfterDecryption);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -1169,8 +1203,8 @@ decryptAndVerifyChunk(const UA_SecureChannel *channel,
     if(channel->securityMode == UA_MESSAGESECURITYMODE_SIGN ||
        channel->securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT ||
        messageType == UA_MESSAGETYPE_OPN) {
-        sigsize = cryptoModule->signatureAlgorithm.
-            getRemoteSignatureSize(securityPolicy, channel->channelContext);
+        sigsize = cryptoModule->signatureAlgorithm.getRemoteSignatureSize(
+            securityPolicy, channel->channelContext);
         paddingSize = decodeChunkPaddingSize(channel, cryptoModule, messageType, chunk,
                                              chunkSizeAfterDecryption, sigsize);
         if(retval != UA_STATUSCODE_GOOD)
@@ -1179,7 +1213,8 @@ decryptAndVerifyChunk(const UA_SecureChannel *channel,
         if(offset + paddingSize + sigsize >= chunkSizeAfterDecryption)
             return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
 
-        retval = verifyChunk(channel, cryptoModule, chunk, chunkSizeAfterDecryption, sigsize);
+        retval =
+            verifyChunk(channel, cryptoModule, chunk, chunkSizeAfterDecryption, sigsize);
         if(retval != UA_STATUSCODE_GOOD)
             return retval;
     }
@@ -1199,12 +1234,13 @@ decryptAndVerifyChunk(const UA_SecureChannel *channel,
     payload->length = chunkSizeAfterDecryption - offset - sigsize - paddingSize;
     UA_LOG_TRACE_CHANNEL(channel->securityPolicy->logger, channel,
                          "Decrypted and verified chunk with request id %u and "
-                         "sequence number %u", *requestId, *sequenceNumber);
+                         "sequence number %u",
+                         *requestId, *sequenceNumber);
     return UA_STATUSCODE_GOOD;
 }
 
-typedef UA_StatusCode
-(*UA_SequenceNumberCallback)(UA_SecureChannel *channel, UA_UInt32 sequenceNumber);
+typedef UA_StatusCode (*UA_SequenceNumberCallback)(UA_SecureChannel *channel,
+                                                   UA_UInt32 sequenceNumber);
 
 static UA_StatusCode
 processSequenceNumberAsym(UA_SecureChannel *channel, UA_UInt32 sequenceNumber) {
@@ -1239,23 +1275,19 @@ processSequenceNumberSym(UA_SecureChannel *channel, UA_UInt32 sequenceNumber) {
 static UA_StatusCode
 checkAsymHeader(UA_SecureChannel *const channel,
                 UA_AsymmetricAlgorithmSecurityHeader *const asymHeader) {
-    UA_StatusCode retval = UA_STATUSCODE_GOOD;
     const UA_SecurityPolicy *const securityPolicy = channel->securityPolicy;
 
-    if(!UA_ByteString_equal(&securityPolicy->policyUri,
-                            &asymHeader->securityPolicyUri)) {
+    if(!UA_ByteString_equal(&securityPolicy->policyUri, &asymHeader->securityPolicyUri)) {
         return UA_STATUSCODE_BADSECURITYPOLICYREJECTED;
     }
 
     // TODO: Verify certificate using certificate plugin. This will come with a new PR
     /* Something like this
-    retval = certificateManager->verify(certificateStore??, &asymHeader->senderCertificate);
-    if(retval != UA_STATUSCODE_GOOD)
-    return retval;
+    retval = certificateManager->verify(certificateStore??,
+    &asymHeader->senderCertificate); if(retval != UA_STATUSCODE_GOOD) return retval;
     */
-    retval = securityPolicy->asymmetricModule.
-        compareCertificateThumbprint(securityPolicy,
-                                     &asymHeader->receiverCertificateThumbprint);
+    UA_StatusCode retval = securityPolicy->asymmetricModule.compareCertificateThumbprint(
+        securityPolicy, &asymHeader->receiverCertificateThumbprint);
     if(retval != UA_STATUSCODE_GOOD) {
         return retval;
     }
@@ -1268,7 +1300,8 @@ checkPreviousToken(UA_SecureChannel *const channel, const UA_UInt32 tokenId) {
     if(tokenId != channel->previousSecurityToken.tokenId)
         return UA_STATUSCODE_BADSECURECHANNELTOKENUNKNOWN;
 
-    UA_DateTime timeout = channel->previousSecurityToken.createdAt +
+    UA_DateTime timeout =
+        channel->previousSecurityToken.createdAt +
         (UA_DateTime)((UA_Double)channel->previousSecurityToken.revisedLifetime *
                       (UA_Double)UA_DATETIME_MSEC * 1.25);
 
@@ -1279,29 +1312,49 @@ checkPreviousToken(UA_SecureChannel *const channel, const UA_UInt32 tokenId) {
 }
 
 static UA_StatusCode
-checkSymHeader(UA_SecureChannel *const channel,
-               const UA_UInt32 tokenId, UA_Boolean allowPreviousToken) {
+checkSymHeader(UA_SecureChannel *const channel, const UA_UInt32 tokenId,
+               UA_Boolean allowPreviousToken) {
 
+    /* If the message uses the currently active token, check if it is still valid */
     if(tokenId == channel->securityToken.tokenId) {
         if(channel->state == UA_SECURECHANNELSTATE_OPEN &&
            (channel->securityToken.createdAt +
-            (channel->securityToken.revisedLifetime * UA_DATETIME_MSEC))
-           < UA_DateTime_nowMonotonic()) {
+            (channel->securityToken.revisedLifetime * UA_DATETIME_MSEC)) <
+               UA_DateTime_nowMonotonic()) {
             UA_SecureChannel_close(channel);
             return UA_STATUSCODE_BADSECURECHANNELCLOSED;
         }
     }
 
+    /* If the message uses a different token, check if it is the next token. */
     if(tokenId != channel->securityToken.tokenId) {
+        /* If it isn't the next token, we might be dealing with a message, that
+         * still uses the old token, so check if the old one is still valid.*/
         if(tokenId != channel->nextSecurityToken.tokenId) {
             if(allowPreviousToken)
                 return checkPreviousToken(channel, tokenId);
-            else
-                return UA_STATUSCODE_BADSECURECHANNELTOKENUNKNOWN;
+
+            return UA_STATUSCODE_BADSECURECHANNELTOKENUNKNOWN;
         }
-        return UA_SecureChannel_revolveTokens(channel);
+        /* If the token is indeed the next token, revolve the tokens */
+        UA_StatusCode retval = UA_SecureChannel_revolveTokens(channel);
+        if(retval != UA_STATUSCODE_GOOD)
+            return retval;
+
+        /* If the message now uses the currently active token also generate
+         * new remote keys to correctly decrypt. */
+        if(channel->securityToken.tokenId == tokenId) {
+            retval =
+                UA_SecureChannel_generateRemoteKeys(channel, channel->securityPolicy);
+            UA_ChannelSecurityToken_deleteMembers(&channel->previousSecurityToken);
+            return retval;
+        }
     }
 
+    /* It is possible that the sent messages already use the new token, but
+     * the received messages still use the old token. If we receive a message
+     * with the new token, we will need to generate the keys and discard the
+     * old token now*/
     if(channel->previousSecurityToken.tokenId != 0) {
         UA_StatusCode retval =
             UA_SecureChannel_generateRemoteKeys(channel, channel->securityPolicy);
@@ -1317,15 +1370,15 @@ putPayload(UA_SecureChannel *const channel, UA_UInt32 const requestId,
            UA_MessageType const messageType, UA_ChunkType const chunkType,
            UA_ByteString *chunkPayload) {
     switch(chunkType) {
-    case UA_CHUNKTYPE_INTERMEDIATE:
-    case UA_CHUNKTYPE_FINAL:
-        return addChunkPayload(channel, requestId, messageType,
-                               chunkPayload, chunkType == UA_CHUNKTYPE_FINAL);
-    case UA_CHUNKTYPE_ABORT:
-        deleteLatestMessage(channel, requestId);
-        return UA_STATUSCODE_GOOD;
-    default:
-        return UA_STATUSCODE_BADTCPMESSAGETYPEINVALID;
+        case UA_CHUNKTYPE_INTERMEDIATE:
+        case UA_CHUNKTYPE_FINAL:
+            return addChunkPayload(channel, requestId, messageType, chunkPayload,
+                                   chunkType == UA_CHUNKTYPE_FINAL);
+        case UA_CHUNKTYPE_ABORT:
+            deleteLatestMessage(channel, requestId);
+            return UA_STATUSCODE_GOOD;
+        default:
+            return UA_STATUSCODE_BADTCPMESSAGETYPEINVALID;
     }
 }
 
@@ -1348,10 +1401,10 @@ decryptAddChunk(UA_SecureChannel *channel, const UA_ByteString *chunk,
         return UA_STATUSCODE_BADSECURECHANNELIDINVALID;
 #endif
 
-    UA_MessageType messageType = (UA_MessageType)
-        (messageHeader.messageHeader.messageTypeAndChunkType & UA_BITMASK_MESSAGETYPE);
-    UA_ChunkType chunkType = (UA_ChunkType)
-        (messageHeader.messageHeader.messageTypeAndChunkType & UA_BITMASK_CHUNKTYPE);
+    UA_MessageType messageType = (UA_MessageType)(
+        messageHeader.messageHeader.messageTypeAndChunkType & UA_BITMASK_MESSAGETYPE);
+    UA_ChunkType chunkType = (UA_ChunkType)(
+        messageHeader.messageHeader.messageTypeAndChunkType & UA_BITMASK_CHUNKTYPE);
     UA_UInt32 requestId = 0;
     UA_UInt32 sequenceNumber = 0;
     UA_ByteString chunkPayload;
@@ -1359,66 +1412,69 @@ decryptAddChunk(UA_SecureChannel *channel, const UA_ByteString *chunk,
     UA_SequenceNumberCallback sequenceNumberCallback = NULL;
 
     switch(messageType) {
-        /* ERR message (not encrypted) */
-    case UA_MESSAGETYPE_ERR:
-        if(chunkType != UA_CHUNKTYPE_FINAL)
-            return UA_STATUSCODE_BADTCPMESSAGETYPEINVALID;
-        chunkPayload.length = chunk->length - offset;
-        chunkPayload.data = chunk->data + offset;
-        return putPayload(channel, requestId, messageType, chunkType, &chunkPayload);
+            /* ERR message (not encrypted) */
+        case UA_MESSAGETYPE_ERR:
+            if(chunkType != UA_CHUNKTYPE_FINAL)
+                return UA_STATUSCODE_BADTCPMESSAGETYPEINVALID;
+            chunkPayload.length = chunk->length - offset;
+            chunkPayload.data = chunk->data + offset;
+            return putPayload(channel, requestId, messageType, chunkType, &chunkPayload);
 
-        /* MSG and CLO: Symmetric encryption */
-    case UA_MESSAGETYPE_MSG:
-    case UA_MESSAGETYPE_CLO: {
-        /* Decode and check the symmetric security header (tokenId) */
-        UA_SymmetricAlgorithmSecurityHeader symmetricSecurityHeader;
-        UA_SymmetricAlgorithmSecurityHeader_init(&symmetricSecurityHeader);
-        retval = UA_SymmetricAlgorithmSecurityHeader_decodeBinary(chunk, &offset,
-                                                                  &symmetricSecurityHeader);
-        if(retval != UA_STATUSCODE_GOOD)
-            return retval;
+            /* MSG and CLO: Symmetric encryption */
+        case UA_MESSAGETYPE_MSG:
+        case UA_MESSAGETYPE_CLO: {
+            /* Decode and check the symmetric security header (tokenId) */
+            UA_SymmetricAlgorithmSecurityHeader symmetricSecurityHeader;
+            UA_SymmetricAlgorithmSecurityHeader_init(&symmetricSecurityHeader);
+            retval = UA_SymmetricAlgorithmSecurityHeader_decodeBinary(
+                chunk, &offset, &symmetricSecurityHeader);
+            if(retval != UA_STATUSCODE_GOOD)
+                return retval;
 
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-        /* Help fuzzing by always setting the correct tokenId */
-        symmetricSecurityHeader.tokenId = channel->securityToken.tokenId;
+            /* Help fuzzing by always setting the correct tokenId */
+            symmetricSecurityHeader.tokenId = channel->securityToken.tokenId;
 #endif
 
-        retval = checkSymHeader(channel, symmetricSecurityHeader.tokenId, allowPreviousToken);
-        if(retval != UA_STATUSCODE_GOOD)
-            return retval;
+            retval = checkSymHeader(channel, symmetricSecurityHeader.tokenId,
+                                    allowPreviousToken);
+            if(retval != UA_STATUSCODE_GOOD)
+                return retval;
 
-        cryptoModule = &channel->securityPolicy->symmetricModule.cryptoModule;
-        sequenceNumberCallback = processSequenceNumberSym;
-        break;
-    }
+            cryptoModule = &channel->securityPolicy->symmetricModule.cryptoModule;
+            sequenceNumberCallback = processSequenceNumberSym;
+            break;
+        }
 
-        /* OPN: Asymmetric encryption */
-    case UA_MESSAGETYPE_OPN: {
-        /* Chunking not allowed for OPN */
-        if(chunkType != UA_CHUNKTYPE_FINAL)
+            /* OPN: Asymmetric encryption */
+        case UA_MESSAGETYPE_OPN: {
+            /* Chunking not allowed for OPN */
+            if(chunkType != UA_CHUNKTYPE_FINAL)
+                return UA_STATUSCODE_BADTCPMESSAGETYPEINVALID;
+
+            /* Decode the asymmetric algorithm security header and call the callback
+             * to perform checks. */
+            UA_AsymmetricAlgorithmSecurityHeader asymHeader;
+            UA_AsymmetricAlgorithmSecurityHeader_init(&asymHeader);
+            offset = UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH;
+            retval = UA_AsymmetricAlgorithmSecurityHeader_decodeBinary(chunk, &offset,
+                                                                       &asymHeader);
+            if(retval != UA_STATUSCODE_GOOD)
+                return retval;
+
+            retval = checkAsymHeader(channel, &asymHeader);
+            UA_AsymmetricAlgorithmSecurityHeader_deleteMembers(&asymHeader);
+            if(retval != UA_STATUSCODE_GOOD)
+                return retval;
+
+            cryptoModule = &channel->securityPolicy->asymmetricModule.cryptoModule;
+            sequenceNumberCallback = processSequenceNumberAsym;
+            break;
+        }
+
+            /* Invalid message type */
+        default:
             return UA_STATUSCODE_BADTCPMESSAGETYPEINVALID;
-
-        /* Decode the asymmetric algorithm security header and call the callback
-         * to perform checks. */
-        UA_AsymmetricAlgorithmSecurityHeader asymHeader;
-        UA_AsymmetricAlgorithmSecurityHeader_init(&asymHeader);
-        offset = UA_SECURE_CONVERSATION_MESSAGE_HEADER_LENGTH;
-        retval = UA_AsymmetricAlgorithmSecurityHeader_decodeBinary(chunk, &offset, &asymHeader);
-        if(retval != UA_STATUSCODE_GOOD)
-            return retval;
-
-        retval = checkAsymHeader(channel, &asymHeader);
-        UA_AsymmetricAlgorithmSecurityHeader_deleteMembers(&asymHeader);
-        if(retval != UA_STATUSCODE_GOOD)
-            return retval;
-
-        cryptoModule = &channel->securityPolicy->asymmetricModule.cryptoModule;
-        sequenceNumberCallback = processSequenceNumberAsym;
-        break;
-    }
-
-        /* Invalid message type */
-    default:return UA_STATUSCODE_BADTCPMESSAGETYPEINVALID;
     }
 
     UA_assert(cryptoModule != NULL);
@@ -1484,16 +1540,18 @@ UA_SecureChannel_persistIncompleteMessages(UA_SecureChannel *channel) {
 /* Functionality used by both the SecureChannel and the SecurityPolicy */
 
 size_t
-UA_SecurityPolicy_getRemoteAsymEncryptionBufferLengthOverhead(const UA_SecurityPolicy *securityPolicy,
-                                                              const void *channelContext,
-                                                              size_t maxEncryptionLength) {
+UA_SecurityPolicy_getRemoteAsymEncryptionBufferLengthOverhead(
+    const UA_SecurityPolicy *securityPolicy, const void *channelContext,
+    size_t maxEncryptionLength) {
     if(maxEncryptionLength == 0)
         return 0;
 
-    size_t plainTextBlockSize = securityPolicy->asymmetricModule.cryptoModule.
-        encryptionAlgorithm.getRemotePlainTextBlockSize(securityPolicy, channelContext);
-    size_t encryptedBlockSize = securityPolicy->asymmetricModule.cryptoModule.
-        encryptionAlgorithm.getRemoteBlockSize(securityPolicy, channelContext);
+    size_t plainTextBlockSize =
+        securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm
+            .getRemotePlainTextBlockSize(securityPolicy, channelContext);
+    size_t encryptedBlockSize =
+        securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm
+            .getRemoteBlockSize(securityPolicy, channelContext);
     if(plainTextBlockSize == 0)
         return 0;
 

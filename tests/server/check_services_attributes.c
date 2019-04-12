@@ -2,16 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <open62541/server_config_default.h>
+
+#include "server/ua_server_internal.h"
+#include "server/ua_services.h"
+
+#include <check.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include "check.h"
-#include "server/ua_services.h"
-#include "ua_client.h"
-#include "ua_types.h"
-#include "ua_config_default.h"
-#include "server/ua_server_internal.h"
 
 #ifdef __clang__
 //required for ck_assert_ptr_eq and const casting
@@ -136,8 +135,8 @@ static void setup(void) {
     UA_MethodAttributes ma = UA_MethodAttributes_default;
     ma.description = UA_LOCALIZEDTEXT("en-US", "Methodtest");
     ma.displayName = UA_LOCALIZEDTEXT("en-US", "Methodtest");
-    retval = UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_METHODNODE),
-                                     UA_NODEID_NUMERIC(0, 3),
+    retval = UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(1, UA_NS0ID_METHODNODE),
+                                     UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                                      UA_QUALIFIEDNAME(0, "Methodtest"), ma,
                                      NULL, 0, NULL, 0, NULL, NULL, NULL);
@@ -522,7 +521,7 @@ START_TEST(ReadSingleAttributeExecutableWithoutTimestamp) {
 #ifdef UA_ENABLE_METHODCALLS
     UA_ReadValueId rvi;
     UA_ReadValueId_init(&rvi);
-    rvi.nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_METHODNODE);
+    rvi.nodeId = UA_NODEID_NUMERIC(1, UA_NS0ID_METHODNODE);
     rvi.attributeId = UA_ATTRIBUTEID_EXECUTABLE;
 
     UA_DataValue resp = UA_Server_read(server, &rvi, UA_TIMESTAMPSTORETURN_NEITHER);
@@ -539,7 +538,7 @@ START_TEST(ReadSingleAttributeUserExecutableWithoutTimestamp) {
 #ifdef UA_ENABLE_METHODCALLS
     UA_ReadValueId rvi;
     UA_ReadValueId_init(&rvi);
-    rvi.nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_METHODNODE);
+    rvi.nodeId = UA_NODEID_NUMERIC(1, UA_NS0ID_METHODNODE);
     rvi.attributeId = UA_ATTRIBUTEID_USEREXECUTABLE;
 
     UA_DataValue resp = UA_Server_read(server, &rvi, UA_TIMESTAMPSTORETURN_NEITHER);

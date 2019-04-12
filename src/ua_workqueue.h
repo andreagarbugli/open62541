@@ -17,8 +17,8 @@
 #ifndef UA_WORKQUEUE_H_
 #define UA_WORKQUEUE_H_
 
-#include "ua_util_internal.h"
 #include "open62541_queue.h"
+#include "ua_util_internal.h"
 
 #ifdef UA_ENABLE_MULTITHREADING
 #include <pthread.h>
@@ -59,8 +59,8 @@ typedef struct {
                                   * for the delayed callbacks */
 
     /* separate cache lines */
-    char padding[64 - sizeof(void*) - sizeof(pthread_t) -
-                 sizeof(UA_UInt32) - sizeof(UA_Boolean)];
+    char padding[64 - sizeof(void *) - sizeof(pthread_t) - sizeof(UA_UInt32) -
+                 sizeof(UA_Boolean)];
 } UA_Worker;
 
 #endif
@@ -73,10 +73,13 @@ struct UA_WorkQueue {
     size_t workersSize;
 
     /* Work queue */
-    SIMPLEQ_HEAD(, UA_DelayedCallback) dispatchQueue; /* Dispatch queue for the worker threads */
+    SIMPLEQ_HEAD(, UA_DelayedCallback)
+    dispatchQueue;                             /* Dispatch queue for the worker threads */
     pthread_mutex_t dispatchQueue_accessMutex; /* mutex for access to queue */
-    pthread_cond_t dispatchQueue_condition; /* so the workers don't spin if the queue is empty */
-    pthread_mutex_t dispatchQueue_conditionMutex; /* mutex for access to condition variable */
+    pthread_cond_t
+        dispatchQueue_condition; /* so the workers don't spin if the queue is empty */
+    pthread_mutex_t
+        dispatchQueue_conditionMutex; /* mutex for access to condition variable */
 #endif
 
     /* Delayed callbacks
@@ -90,7 +93,8 @@ struct UA_WorkQueue {
 #endif
 };
 
-void UA_WorkQueue_init(UA_WorkQueue *wq);
+void
+UA_WorkQueue_init(UA_WorkQueue *wq);
 
 /* Enqueue a delayed callback. It is executed when all previous work in the
  * queue has been finished. The ``cb`` pointer is freed afterwards. ``cb`` can
@@ -98,29 +102,35 @@ void UA_WorkQueue_init(UA_WorkQueue *wq);
  *
  * This method checks internally if existing delayed work can be moved from the
  * delayed queue to the worker dispatch queue. */
-void UA_WorkQueue_enqueueDelayed(UA_WorkQueue *wq, UA_DelayedCallback *cb);
+void
+UA_WorkQueue_enqueueDelayed(UA_WorkQueue *wq, UA_DelayedCallback *cb);
 
 /* Stop the workers, process all enqueued work in the calling thread, clean up
  * mutexes etc. */
-void UA_WorkQueue_cleanup(UA_WorkQueue *wq);
+void
+UA_WorkQueue_cleanup(UA_WorkQueue *wq);
 
 #ifndef UA_ENABLE_MULTITHREADING
 
 /* Process all enqueued delayed work. This is not needed when workers are
  * running for the multithreading case. (UA_WorkQueue_cleanup still calls this
  * method during cleanup when the workers are shut down.) */
-void UA_WorkQueue_manuallyProcessDelayed(UA_WorkQueue *wq);
+void
+UA_WorkQueue_manuallyProcessDelayed(UA_WorkQueue *wq);
 
 #else
 
 /* Spin up a number of worker threads that listen on the work queue */
-UA_StatusCode UA_WorkQueue_start(UA_WorkQueue *wq, size_t workersCount);
+UA_StatusCode
+UA_WorkQueue_start(UA_WorkQueue *wq, size_t workersCount);
 
-void UA_WorkQueue_stop(UA_WorkQueue *wq);
+void
+UA_WorkQueue_stop(UA_WorkQueue *wq);
 
 /* Enqueue work for the worker threads */
-void UA_WorkQueue_enqueue(UA_WorkQueue *wq, UA_ApplicationCallback cb,
-                          void *application, void *data);
+void
+UA_WorkQueue_enqueue(UA_WorkQueue *wq, UA_ApplicationCallback cb, void *application,
+                     void *data);
 
 #endif
 

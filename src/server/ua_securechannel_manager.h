@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2014-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2014, 2017 (c) Florian Palm
@@ -11,11 +11,12 @@
 #ifndef UA_CHANNEL_MANAGER_H_
 #define UA_CHANNEL_MANAGER_H_
 
-#include "ua_util_internal.h"
-#include "ua_server.h"
-#include "ua_workqueue.h"
-#include "ua_securechannel.h"
+#include <open62541/server.h>
+
 #include "open62541_queue.h"
+#include "ua_securechannel.h"
+#include "ua_util_internal.h"
+#include "ua_workqueue.h"
 
 _UA_BEGIN_DECLS
 
@@ -26,7 +27,7 @@ typedef struct channel_entry {
 } channel_entry;
 
 typedef struct {
-    TAILQ_HEAD(, channel_entry) channels; // doubly-linked list of channels
+    TAILQ_HEAD(, channel_entry) channels;  // doubly-linked list of channels
     UA_UInt32 currentChannelCount;
     UA_UInt32 lastChannelId;
     UA_UInt32 lastTokenId;
@@ -47,9 +48,10 @@ UA_SecureChannelManager_cleanupTimedOut(UA_SecureChannelManager *cm,
                                         UA_DateTime nowMonotonic);
 
 UA_StatusCode
-UA_SecureChannelManager_create(UA_SecureChannelManager *const cm, UA_Connection *const connection,
-                               const UA_SecurityPolicy *const securityPolicy,
-                               const UA_AsymmetricAlgorithmSecurityHeader *const asymHeader);
+UA_SecureChannelManager_create(
+    UA_SecureChannelManager *const cm, UA_Connection *const connection,
+    const UA_SecurityPolicy *const securityPolicy,
+    const UA_AsymmetricAlgorithmSecurityHeader *const asymHeader);
 
 UA_StatusCode
 UA_SecureChannelManager_open(UA_SecureChannelManager *cm, UA_SecureChannel *channel,

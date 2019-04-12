@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2015-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2015 (c) Chris Iatrou
@@ -14,10 +14,13 @@
 #ifndef UA_SUBSCRIPTION_H_
 #define UA_SUBSCRIPTION_H_
 
-#include "ua_util_internal.h"
-#include "ua_types.h"
-#include "ua_types_generated.h"
+#include <open62541/plugin/nodestore.h>
+#include <open62541/types.h>
+#include <open62541/types_generated.h>
+
 #include "ua_session.h"
+#include "ua_util_internal.h"
+#include "ua_workqueue.h"
 
 _UA_BEGIN_DECLS
 
@@ -73,15 +76,18 @@ typedef struct UA_Notification {
 
 /* Ensure enough space is available; Add notification to the linked lists;
  * Increase the counters */
-void UA_Notification_enqueue(UA_Server *server, UA_Subscription *sub,
-                             UA_MonitoredItem *mon, UA_Notification *n);
+void
+UA_Notification_enqueue(UA_Server *server, UA_Subscription *sub, UA_MonitoredItem *mon,
+                        UA_Notification *n);
 
 /* Remove the notification from the MonitoredItem's queue and the Subscriptions
  * global queue. Reduce the respective counters. */
-void UA_Notification_dequeue(UA_Server *server, UA_Notification *n);
+void
+UA_Notification_dequeue(UA_Server *server, UA_Notification *n);
 
 /* Delete the notification. Must be dequeued first. */
-void UA_Notification_delete(UA_Notification *n);
+void
+UA_Notification_delete(UA_Notification *n);
 
 typedef TAILQ_HEAD(NotificationQueue, UA_Notification) NotificationQueue;
 
@@ -101,9 +107,9 @@ struct UA_MonitoredItem {
     UA_NodeId monitoredNodeId;
     UA_UInt32 attributeId;
     UA_String indexRange;
-    UA_Double samplingInterval; // [ms]
-    UA_UInt32 maxQueueSize; /* The max number of enqueued notifications (not
-                               counting overflow events) */
+    UA_Double samplingInterval;  // [ms]
+    UA_UInt32 maxQueueSize;      /* The max number of enqueued notifications (not
+                                    counting overflow events) */
     UA_Boolean discardOldest;
     // TODO: dataEncoding is hardcoded to UA binary
     union {
@@ -122,8 +128,8 @@ struct UA_MonitoredItem {
     /* Notification Queue */
     NotificationQueue queue;
     UA_UInt32 queueSize;
-     /* Save the amount of OverflowEvents in a separate counter */
-     UA_UInt32 eventOverflows;
+    /* Save the amount of OverflowEvents in a separate counter */
+    UA_UInt32 eventOverflows;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
     UA_MonitoredItem *next;
 #endif
@@ -133,18 +139,25 @@ struct UA_MonitoredItem {
 #endif
 };
 
-void UA_MonitoredItem_init(UA_MonitoredItem *mon, UA_Subscription *sub);
-void UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *mon);
-void UA_MonitoredItem_sampleCallback(UA_Server *server, UA_MonitoredItem *mon);
-UA_StatusCode UA_MonitoredItem_registerSampleCallback(UA_Server *server, UA_MonitoredItem *mon);
-void UA_MonitoredItem_unregisterSampleCallback(UA_Server *server, UA_MonitoredItem *mon);
+void
+UA_MonitoredItem_init(UA_MonitoredItem *mon, UA_Subscription *sub);
+void
+UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem);
+void
+UA_MonitoredItem_sampleCallback(UA_Server *server, UA_MonitoredItem *monitoredItem);
+UA_StatusCode
+UA_MonitoredItem_registerSampleCallback(UA_Server *server, UA_MonitoredItem *mon);
+void
+UA_MonitoredItem_unregisterSampleCallback(UA_Server *server, UA_MonitoredItem *mon);
 
 /* Remove entries until mon->maxQueueSize is reached. Sets infobits for lost
  * data if required. */
-UA_StatusCode UA_MonitoredItem_ensureQueueSpace(UA_Server *server, UA_MonitoredItem *mon);
+UA_StatusCode
+UA_MonitoredItem_ensureQueueSpace(UA_Server *server, UA_MonitoredItem *mon);
 
-UA_StatusCode UA_MonitoredItem_removeNodeEventCallback(UA_Server *server, UA_Session *session,
-                                                       UA_Node *node, void *data);
+UA_StatusCode
+UA_MonitoredItem_removeNodeEventCallback(UA_Server *server, UA_Session *session,
+                                         UA_Node *node, void *data);
 
 /****************/
 /* Subscription */
@@ -164,7 +177,8 @@ typedef enum {
     UA_SUBSCRIPTIONSTATE_KEEPALIVE
 } UA_SubscriptionState;
 
-typedef TAILQ_HEAD(ListOfNotificationMessages, UA_NotificationMessageEntry) ListOfNotificationMessages;
+typedef TAILQ_HEAD(ListOfNotificationMessages,
+                   UA_NotificationMessageEntry) ListOfNotificationMessages;
 
 struct UA_Subscription {
     UA_DelayedCallback delayedFreePointers;
@@ -213,22 +227,33 @@ struct UA_Subscription {
     size_t retransmissionQueueSize;
 };
 
-UA_Subscription * UA_Subscription_new(UA_Session *session, UA_UInt32 subscriptionId);
-void UA_Subscription_deleteMembers(UA_Server *server, UA_Subscription *sub);
-UA_StatusCode Subscription_registerPublishCallback(UA_Server *server, UA_Subscription *sub);
-void Subscription_unregisterPublishCallback(UA_Server *server, UA_Subscription *sub);
-void UA_Subscription_addMonitoredItem(UA_Subscription *sub, UA_MonitoredItem *newMon);
-UA_MonitoredItem * UA_Subscription_getMonitoredItem(UA_Subscription *sub, UA_UInt32 monitoredItemId);
+UA_Subscription *
+UA_Subscription_new(UA_Session *session, UA_UInt32 subscriptionId);
+void
+UA_Subscription_deleteMembers(UA_Server *server, UA_Subscription *sub);
+UA_StatusCode
+Subscription_registerPublishCallback(UA_Server *server, UA_Subscription *sub);
+void
+Subscription_unregisterPublishCallback(UA_Server *server, UA_Subscription *sub);
+void
+UA_Subscription_addMonitoredItem(UA_Subscription *sub, UA_MonitoredItem *newMon);
+UA_MonitoredItem *
+UA_Subscription_getMonitoredItem(UA_Subscription *sub, UA_UInt32 monitoredItemId);
 
 UA_StatusCode
 UA_Subscription_deleteMonitoredItem(UA_Server *server, UA_Subscription *sub,
                                     UA_UInt32 monitoredItemId);
 
-void UA_Subscription_publish(UA_Server *server, UA_Subscription *sub);
-UA_StatusCode UA_Subscription_removeRetransmissionMessage(UA_Subscription *sub,
-                                                          UA_UInt32 sequenceNumber);
-void UA_Subscription_answerPublishRequestsNoSubscription(UA_Server *server, UA_Session *session);
-UA_Boolean UA_Subscription_reachedPublishReqLimit(UA_Server *server,  UA_Session *session);
+void
+UA_Subscription_publish(UA_Server *server, UA_Subscription *sub);
+UA_StatusCode
+UA_Subscription_removeRetransmissionMessage(UA_Subscription *sub,
+                                            UA_UInt32 sequenceNumber);
+void
+UA_Subscription_answerPublishRequestsNoSubscription(UA_Server *server,
+                                                    UA_Session *session);
+UA_Boolean
+UA_Subscription_reachedPublishReqLimit(UA_Server *server, UA_Session *session);
 
 #endif /* UA_ENABLE_SUBSCRIPTIONS */
 

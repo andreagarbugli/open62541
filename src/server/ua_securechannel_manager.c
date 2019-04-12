@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2014-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2014-2017 (c) Florian Palm
@@ -11,9 +11,11 @@
  */
 
 #include "ua_securechannel_manager.h"
-#include "ua_session.h"
+
+#include <open62541/transport_generated.h>
+
 #include "ua_server_internal.h"
-#include "ua_transport_generated_handling.h"
+#include "ua_session.h"
 
 #define STARTCHANNELID 1
 #define STARTTOKENID 1
@@ -76,9 +78,9 @@ UA_SecureChannelManager_cleanupTimedOut(UA_SecureChannelManager *cm,
         }
 
         /* The channel has timed out */
-        UA_DateTime timeout =
-            entry->channel.securityToken.createdAt +
-            (UA_DateTime)(entry->channel.securityToken.revisedLifetime * UA_DATETIME_MSEC);
+        UA_DateTime timeout = entry->channel.securityToken.createdAt +
+                              (UA_DateTime)(entry->channel.securityToken.revisedLifetime *
+                                            UA_DATETIME_MSEC);
         if(timeout < nowMonotonic) {
             UA_LOG_INFO_CHANNEL(&cm->server->config.logger, &entry->channel,
                                 "SecureChannel has timed out");
@@ -110,9 +112,10 @@ purgeFirstChannelWithoutSession(UA_SecureChannelManager *cm) {
 }
 
 UA_StatusCode
-UA_SecureChannelManager_create(UA_SecureChannelManager *const cm, UA_Connection *const connection,
-                               const UA_SecurityPolicy *const securityPolicy,
-                               const UA_AsymmetricAlgorithmSecurityHeader *const asymHeader) {
+UA_SecureChannelManager_create(
+    UA_SecureChannelManager *const cm, UA_Connection *const connection,
+    const UA_SecurityPolicy *const securityPolicy,
+    const UA_AsymmetricAlgorithmSecurityHeader *const asymHeader) {
     /* connection already has a channel attached. */
     if(connection->channel != NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
@@ -134,9 +137,8 @@ UA_SecureChannelManager_create(UA_SecureChannelManager *const cm, UA_Connection 
     /* Create the channel context and parse the sender (remote) certificate used for the
      * secureChannel. */
     UA_SecureChannel_init(&entry->channel);
-    UA_StatusCode retval =
-        UA_SecureChannel_setSecurityPolicy(&entry->channel, securityPolicy,
-                                           &asymHeader->senderCertificate);
+    UA_StatusCode retval = UA_SecureChannel_setSecurityPolicy(
+        &entry->channel, securityPolicy, &asymHeader->senderCertificate);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_free(entry);
         return retval;
@@ -146,7 +148,8 @@ UA_SecureChannelManager_create(UA_SecureChannelManager *const cm, UA_Connection 
     entry->channel.securityToken.channelId = 0;
     entry->channel.securityToken.tokenId = cm->lastTokenId++;
     entry->channel.securityToken.createdAt = UA_DateTime_now();
-    entry->channel.securityToken.revisedLifetime = cm->server->config.maxSecurityTokenLifetime;
+    entry->channel.securityToken.revisedLifetime =
+        cm->server->config.maxSecurityTokenLifetime;
 
     TAILQ_INSERT_TAIL(&cm->channels, entry, pointers);
     UA_atomic_addUInt32(&cm->currentChannelCount, 1);
@@ -165,7 +168,8 @@ UA_SecureChannelManager_open(UA_SecureChannelManager *cm, UA_SecureChannel *chan
     }
 
     if(request->securityMode != UA_MESSAGESECURITYMODE_NONE &&
-       UA_ByteString_equal(&channel->securityPolicy->policyUri, &UA_SECURITY_POLICY_NONE_URI)) {
+       UA_ByteString_equal(&channel->securityPolicy->policyUri,
+                           &UA_SECURITY_POLICY_NONE_URI)) {
         return UA_STATUSCODE_BADSECURITYMODEREJECTED;
     }
 
@@ -176,13 +180,16 @@ UA_SecureChannelManager_open(UA_SecureChannelManager *cm, UA_SecureChannel *chan
 
     /* Set the lifetime. Lifetime 0 -> set the maximum possible */
     channel->securityToken.revisedLifetime =
-        (request->requestedLifetime > cm->server->config.maxSecurityTokenLifetime) ?
-        cm->server->config.maxSecurityTokenLifetime : request->requestedLifetime;
+        (request->requestedLifetime > cm->server->config.maxSecurityTokenLifetime)
+            ? cm->server->config.maxSecurityTokenLifetime
+            : request->requestedLifetime;
     if(channel->securityToken.revisedLifetime == 0)
-        channel->securityToken.revisedLifetime = cm->server->config.maxSecurityTokenLifetime;
+        channel->securityToken.revisedLifetime =
+            cm->server->config.maxSecurityTokenLifetime;
 
     /* Set the nonces and generate the keys */
-    UA_StatusCode retval = UA_ByteString_copy(&request->clientNonce, &channel->remoteNonce);
+    UA_StatusCode retval =
+        UA_ByteString_copy(&request->clientNonce, &channel->remoteNonce);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -199,7 +206,8 @@ UA_SecureChannelManager_open(UA_SecureChannelManager *cm, UA_SecureChannel *chan
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    retval = UA_ChannelSecurityToken_copy(&channel->securityToken, &response->securityToken);
+    retval =
+        UA_ChannelSecurityToken_copy(&channel->securityToken, &response->securityToken);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -228,15 +236,19 @@ UA_SecureChannelManager_renew(UA_SecureChannelManager *cm, UA_SecureChannel *cha
         channel->nextSecurityToken.tokenId = cm->lastTokenId++;
         channel->nextSecurityToken.createdAt = UA_DateTime_now();
         channel->nextSecurityToken.revisedLifetime =
-            (request->requestedLifetime > cm->server->config.maxSecurityTokenLifetime) ?
-            cm->server->config.maxSecurityTokenLifetime : request->requestedLifetime;
-        if(channel->nextSecurityToken.revisedLifetime == 0) /* lifetime 0 -> return the max lifetime */
-            channel->nextSecurityToken.revisedLifetime = cm->server->config.maxSecurityTokenLifetime;
+            (request->requestedLifetime > cm->server->config.maxSecurityTokenLifetime)
+                ? cm->server->config.maxSecurityTokenLifetime
+                : request->requestedLifetime;
+        if(channel->nextSecurityToken.revisedLifetime ==
+           0) /* lifetime 0 -> return the max lifetime */
+            channel->nextSecurityToken.revisedLifetime =
+                cm->server->config.maxSecurityTokenLifetime;
     }
 
     /* Replace the nonces */
     UA_ByteString_deleteMembers(&channel->remoteNonce);
-    UA_StatusCode retval = UA_ByteString_copy(&request->clientNonce, &channel->remoteNonce);
+    UA_StatusCode retval =
+        UA_ByteString_copy(&request->clientNonce, &channel->remoteNonce);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -250,7 +262,8 @@ UA_SecureChannelManager_renew(UA_SecureChannelManager *cm, UA_SecureChannel *cha
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    retval = UA_ChannelSecurityToken_copy(&channel->nextSecurityToken, &response->securityToken);
+    retval = UA_ChannelSecurityToken_copy(&channel->nextSecurityToken,
+                                          &response->securityToken);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 

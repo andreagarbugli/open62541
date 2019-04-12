@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2016-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2016 (c) Lorenz Haas
@@ -21,14 +21,14 @@
 /* Keeps track of already visited nodes to detect circular references */
 struct ref_history {
     struct ref_history *parent; /* the previous element */
-    const UA_NodeId *id; /* the id of the node at this depth */
+    const UA_NodeId *id;        /* the id of the node at this depth */
     UA_UInt16 depth;
 };
 
 static UA_Boolean
-isNodeInTreeNoCircular(UA_Nodestore *ns, const UA_NodeId *leafNode, const UA_NodeId *nodeToFind,
-                       struct ref_history *visitedRefs, const UA_NodeId *referenceTypeIds,
-                       size_t referenceTypeIdsSize) {
+isNodeInTreeNoCircular(UA_Nodestore *ns, const UA_NodeId *leafNode,
+                       const UA_NodeId *nodeToFind, struct ref_history *visitedRefs,
+                       const UA_NodeId *referenceTypeIds, size_t referenceTypeIdsSize) {
     if(UA_NodeId_equal(nodeToFind, leafNode))
         return true;
 
@@ -76,12 +76,12 @@ isNodeInTreeNoCircular(UA_Nodestore *ns, const UA_NodeId *leafNode, const UA_Nod
 
             /* Stack-allocate the visitedRefs structure for the next depth */
             struct ref_history nextVisitedRefs = {visitedRefs, &refs->targetIds[j].nodeId,
-                                                  (UA_UInt16)(visitedRefs->depth+1)};
+                                                  (UA_UInt16)(visitedRefs->depth + 1)};
 
             /* Recurse */
-            UA_Boolean foundRecursive =
-                isNodeInTreeNoCircular(ns, &refs->targetIds[j].nodeId, nodeToFind, &nextVisitedRefs,
-                                       referenceTypeIds, referenceTypeIdsSize);
+            UA_Boolean foundRecursive = isNodeInTreeNoCircular(
+                ns, &refs->targetIds[j].nodeId, nodeToFind, &nextVisitedRefs,
+                referenceTypeIds, referenceTypeIdsSize);
             if(foundRecursive) {
                 ns->releaseNode(ns->context, node);
                 return true;
@@ -97,7 +97,8 @@ UA_Boolean
 isNodeInTree(UA_Nodestore *ns, const UA_NodeId *leafNode, const UA_NodeId *nodeToFind,
              const UA_NodeId *referenceTypeIds, size_t referenceTypeIdsSize) {
     struct ref_history visitedRefs = {NULL, leafNode, 0};
-    return isNodeInTreeNoCircular(ns, leafNode, nodeToFind, &visitedRefs, referenceTypeIds, referenceTypeIdsSize);
+    return isNodeInTreeNoCircular(ns, leafNode, nodeToFind, &visitedRefs,
+                                  referenceTypeIds, referenceTypeIdsSize);
 }
 
 const UA_Node *
@@ -107,26 +108,26 @@ getNodeType(UA_Server *server, const UA_Node *node) {
     UA_Boolean inverse;
     UA_NodeClass typeNodeClass;
     switch(node->nodeClass) {
-    case UA_NODECLASS_OBJECT:
-        parentRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
-        inverse = false;
-        typeNodeClass = UA_NODECLASS_OBJECTTYPE;
-        break;
-    case UA_NODECLASS_VARIABLE:
-        parentRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
-        inverse = false;
-        typeNodeClass = UA_NODECLASS_VARIABLETYPE;
-        break;
-    case UA_NODECLASS_OBJECTTYPE:
-    case UA_NODECLASS_VARIABLETYPE:
-    case UA_NODECLASS_REFERENCETYPE:
-    case UA_NODECLASS_DATATYPE:
-        parentRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
-        inverse = true;
-        typeNodeClass = node->nodeClass;
-        break;
-    default:
-        return NULL;
+        case UA_NODECLASS_OBJECT:
+            parentRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
+            inverse = false;
+            typeNodeClass = UA_NODECLASS_OBJECTTYPE;
+            break;
+        case UA_NODECLASS_VARIABLE:
+            parentRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
+            inverse = false;
+            typeNodeClass = UA_NODECLASS_VARIABLETYPE;
+            break;
+        case UA_NODECLASS_OBJECTTYPE:
+        case UA_NODECLASS_VARIABLETYPE:
+        case UA_NODECLASS_REFERENCETYPE:
+        case UA_NODECLASS_DATATYPE:
+            parentRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
+            inverse = true;
+            typeNodeClass = node->nodeClass;
+            break;
+        default:
+            return NULL;
     }
 
     /* Return the first matching candidate */
@@ -163,8 +164,8 @@ UA_Node_hasSubTypeOrInstances(const UA_Node *node) {
     return false;
 }
 
-static const UA_NodeId hasSubtypeNodeId =
-    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASSUBTYPE}};
+static const UA_NodeId hasSubtypeNodeId = {
+    0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASSUBTYPE}};
 
 static UA_StatusCode
 getTypeHierarchyFromNode(UA_NodeId **results_ptr, size_t *results_count,
@@ -175,7 +176,7 @@ getTypeHierarchyFromNode(UA_NodeId **results_ptr, size_t *results_count,
         /* Is the reference kind relevant? */
         UA_NodeReferenceKind *refs = &node->references[i];
         // if downwards, we do not want inverse, if upwards we want inverse
-        if (walkDownwards == refs->isInverse)
+        if(walkDownwards == refs->isInverse)
             continue;
         if(!UA_NodeId_equal(&hasSubtypeNodeId, &refs->referenceTypeId))
             continue;
@@ -197,7 +198,7 @@ getTypeHierarchyFromNode(UA_NodeId **results_ptr, size_t *results_count,
             /* Increase array length if necessary */
             if(*results_count >= *results_size) {
                 size_t new_size = sizeof(UA_NodeId) * (*results_size) * 2;
-                UA_NodeId *new_results = (UA_NodeId*)UA_realloc(results, new_size);
+                UA_NodeId *new_results = (UA_NodeId *)UA_realloc(results, new_size);
                 if(!new_results) {
                     UA_Array_delete(results, *results_count, &UA_TYPES[UA_TYPES_NODEID]);
                     return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -220,12 +221,11 @@ getTypeHierarchyFromNode(UA_NodeId **results_ptr, size_t *results_count,
 }
 
 UA_StatusCode
-getTypeHierarchy(UA_Nodestore *ns, const UA_NodeId *leafType,
-                 UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
-                 UA_Boolean walkDownwards) {
+getTypeHierarchy(UA_Nodestore *ns, const UA_NodeId *leafType, UA_NodeId **typeHierarchy,
+                 size_t *typeHierarchySize, UA_Boolean walkDownwards) {
     /* Allocate the results array. Probably too big, but saves mallocs. */
     size_t results_size = 20;
-    UA_NodeId *results = (UA_NodeId*)UA_malloc(sizeof(UA_NodeId) * results_size);
+    UA_NodeId *results = (UA_NodeId *)UA_malloc(sizeof(UA_NodeId) * results_size);
     if(!results)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
@@ -244,15 +244,15 @@ getTypeHierarchy(UA_Nodestore *ns, const UA_NodeId *leafType,
 
         /* Invalid node, remove from the array */
         if(!node) {
-            for(size_t i = idx; i < results_count-1; ++i)
-                results[i] = results[i+1];
+            for(size_t i = idx; i < results_count - 1; ++i)
+                results[i] = results[i + 1];
             results_count--;
             continue;
         }
 
         /* Add references from the current node to the end of the array */
-        retval = getTypeHierarchyFromNode(&results, &results_count,
-                                          &results_size, node, walkDownwards);
+        retval = getTypeHierarchyFromNode(&results, &results_count, &results_size, node,
+                                          walkDownwards);
 
         /* Release the node */
         ns->releaseNode(ns->context, node);
@@ -274,31 +274,31 @@ getTypeHierarchy(UA_Nodestore *ns, const UA_NodeId *leafType,
     return UA_STATUSCODE_GOOD;
 }
 
-
 UA_StatusCode
 getTypesHierarchy(UA_Nodestore *ns, const UA_NodeId *leafType, size_t leafTypeSize,
-                 UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
-                 UA_Boolean walkDownwards) {
+                  UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
+                  UA_Boolean walkDownwards) {
     UA_NodeId *results = NULL;
     size_t results_count = 0;
-    for (size_t i=0; i<leafTypeSize; i++) {
+    for(size_t i = 0; i < leafTypeSize; i++) {
         UA_NodeId *tmpResults = NULL;
         size_t tmpResults_size = 0;
-        UA_StatusCode retval = getTypeHierarchy(ns, &leafType[i], &tmpResults, &tmpResults_size, walkDownwards);
+        UA_StatusCode retval = getTypeHierarchy(ns, &leafType[i], &tmpResults,
+                                                &tmpResults_size, walkDownwards);
         if(retval != UA_STATUSCODE_GOOD) {
             UA_Array_delete(results, results_count, &UA_TYPES[UA_TYPES_NODEID]);
             return retval;
         }
-        if (tmpResults_size == 0 || tmpResults == NULL )
+        if(tmpResults_size == 0 || tmpResults == NULL)
             continue;
         size_t new_size = sizeof(UA_NodeId) * (results_count + tmpResults_size);
-        UA_NodeId *new_results = (UA_NodeId*)UA_realloc(results, new_size);
+        UA_NodeId *new_results = (UA_NodeId *)UA_realloc(results, new_size);
         if(!new_results) {
             UA_Array_delete(results, results_count, &UA_TYPES[UA_TYPES_NODEID]);
             return UA_STATUSCODE_BADOUTOFMEMORY;
         }
         results = new_results;
-        memcpy(&results[results_count],tmpResults, sizeof(UA_NodeId)*tmpResults_size);
+        memcpy(&results[results_count], tmpResults, sizeof(UA_NodeId) * tmpResults_size);
         /* do not use UA_Array_delete since we still need the content of the nodes */
         UA_free(tmpResults);
         results_count = results_count + tmpResults_size;
@@ -311,15 +311,14 @@ getTypesHierarchy(UA_Nodestore *ns, const UA_NodeId *leafType, size_t leafTypeSi
 /* For mulithreading: make a copy of the node, edit and replace.
  * For singlethreading: edit the original */
 UA_StatusCode
-UA_Server_editNode(UA_Server *server, UA_Session *session,
-                   const UA_NodeId *nodeId, UA_EditNodeCallback callback,
-                   void *data) {
+UA_Server_editNode(UA_Server *server, UA_Session *session, const UA_NodeId *nodeId,
+                   UA_EditNodeCallback callback, void *data) {
 #ifndef UA_ENABLE_IMMUTABLE_NODES
     /* Get the node and process it in-situ */
     const UA_Node *node = UA_Nodestore_get(server, nodeId);
     if(!node)
         return UA_STATUSCODE_BADNODEIDUNKNOWN;
-    UA_StatusCode retval = callback(server, session, (UA_Node*)(uintptr_t)node, data);
+    UA_StatusCode retval = callback(server, session, (UA_Node *)(uintptr_t)node, data);
     UA_Nodestore_release(server, node);
     return retval;
 #else
@@ -327,8 +326,8 @@ UA_Server_editNode(UA_Server *server, UA_Session *session,
     do {
         /* Get an editable copy of the node */
         UA_Node *node;
-        retval = server->config.nodestore.
-            getNodeCopy(server->config.nodestore.context, nodeId, &node);
+        retval = server->config.nodestore.getNodeCopy(server->config.nodestore.context,
+                                                      nodeId, &node);
         if(retval != UA_STATUSCODE_GOOD)
             return retval;
 
@@ -340,7 +339,8 @@ UA_Server_editNode(UA_Server *server, UA_Session *session,
         }
 
         /* Replace the node */
-        retval = server->config.nodestore.replaceNode(server->config.nodestore.context, node);
+        retval =
+            server->config.nodestore.replaceNode(server->config.nodestore.context, node);
     } while(retval != UA_STATUSCODE_GOOD);
     return retval;
 #endif
@@ -348,8 +348,8 @@ UA_Server_editNode(UA_Server *server, UA_Session *session,
 
 UA_StatusCode
 UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
-                                   UA_ServiceOperation operationCallback,
-                                   void *context, const size_t *requestOperations,
+                                   UA_ServiceOperation operationCallback, void *context,
+                                   const size_t *requestOperations,
                                    const UA_DataType *requestOperationsType,
                                    size_t *responseOperations,
                                    const UA_DataType *responseOperationsType) {
@@ -358,7 +358,7 @@ UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
         return UA_STATUSCODE_BADNOTHINGTODO;
 
     /* No padding after size_t */
-    void **respPos = (void**)((uintptr_t)responseOperations + sizeof(size_t));
+    void **respPos = (void **)((uintptr_t)responseOperations + sizeof(size_t));
     *respPos = UA_Array_new(ops, responseOperationsType);
     if(!(*respPos))
         return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -366,9 +366,9 @@ UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
     *responseOperations = ops;
     uintptr_t respOp = (uintptr_t)*respPos;
     /* No padding after size_t */
-    uintptr_t reqOp = *(uintptr_t*)((uintptr_t)requestOperations + sizeof(size_t));
+    uintptr_t reqOp = *(uintptr_t *)((uintptr_t)requestOperations + sizeof(size_t));
     for(size_t i = 0; i < ops; i++) {
-        operationCallback(server, session, context, (void*)reqOp, (void*)respOp);
+        operationCallback(server, session, context, (void *)reqOp, (void *)respOp);
         reqOp += requestOperationsType->memSize;
         respOp += responseOperationsType->memSize;
     }
@@ -377,7 +377,8 @@ UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
 
 /* A few global NodeId definitions */
 const UA_NodeId subtypeId = {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASSUBTYPE}};
-const UA_NodeId hierarchicalReferences = {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HIERARCHICALREFERENCES}};
+const UA_NodeId hierarchicalReferences = {
+    0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HIERARCHICALREFERENCES}};
 
 /*********************************/
 /* Default attribute definitions */
@@ -387,80 +388,87 @@ const UA_ObjectAttributes UA_ObjectAttributes_default = {
     0,                      /* specifiedAttributes */
     {{0, NULL}, {0, NULL}}, /* displayName */
     {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    0                       /* eventNotifier */
+    0,
+    0, /* writeMask (userWriteMask) */
+    0  /* eventNotifier */
 };
 
 const UA_VariableAttributes UA_VariableAttributes_default = {
-    0,                           /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}},      /* displayName */
-    {{0, NULL}, {0, NULL}},      /* description */
-    0, 0,                        /* writeMask (userWriteMask) */
-    {NULL, UA_VARIANT_DATA,
-     0, NULL, 0, NULL},          /* value */
-    {0, UA_NODEIDTYPE_NUMERIC,
-     {UA_NS0ID_BASEDATATYPE}},   /* dataType */
-    UA_VALUERANK_ANY,            /* valueRank */
-    0, NULL,                     /* arrayDimensions */
-    UA_ACCESSLEVELMASK_READ, 0,  /* accessLevel (userAccessLevel) */
-    0.0,                         /* minimumSamplingInterval */
-    false                        /* historizing */
+    0,                      /* specifiedAttributes */
+    {{0, NULL}, {0, NULL}}, /* displayName */
+    {{0, NULL}, {0, NULL}}, /* description */
+    0,
+    0,                                                   /* writeMask (userWriteMask) */
+    {NULL, UA_VARIANT_DATA, 0, NULL, 0, NULL},           /* value */
+    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_BASEDATATYPE}}, /* dataType */
+    UA_VALUERANK_ANY,                                    /* valueRank */
+    0,
+    NULL, /* arrayDimensions */
+    UA_ACCESSLEVELMASK_READ,
+    0,    /* accessLevel (userAccessLevel) */
+    0.0,  /* minimumSamplingInterval */
+    false /* historizing */
 };
 
 const UA_MethodAttributes UA_MethodAttributes_default = {
     0,                      /* specifiedAttributes */
     {{0, NULL}, {0, NULL}}, /* displayName */
     {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    true, true              /* executable (userExecutable) */
+    0,
+    0, /* writeMask (userWriteMask) */
+    true,
+    true /* executable (userExecutable) */
 };
 
 const UA_ObjectTypeAttributes UA_ObjectTypeAttributes_default = {
     0,                      /* specifiedAttributes */
     {{0, NULL}, {0, NULL}}, /* displayName */
     {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    false                   /* isAbstract */
+    0,
+    0,    /* writeMask (userWriteMask) */
+    false /* isAbstract */
 };
 
 const UA_VariableTypeAttributes UA_VariableTypeAttributes_default = {
-    0,                           /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}},      /* displayName */
-    {{0, NULL}, {0, NULL}},      /* description */
-    0, 0,                        /* writeMask (userWriteMask) */
-    {NULL, UA_VARIANT_DATA,
-     0, NULL, 0, NULL},          /* value */
-    {0, UA_NODEIDTYPE_NUMERIC,
-     {UA_NS0ID_BASEDATATYPE}},   /* dataType */
-    UA_VALUERANK_ANY,            /* valueRank */
-    0, NULL,                     /* arrayDimensions */
-    false                        /* isAbstract */
+    0,                      /* specifiedAttributes */
+    {{0, NULL}, {0, NULL}}, /* displayName */
+    {{0, NULL}, {0, NULL}}, /* description */
+    0,
+    0,                                                   /* writeMask (userWriteMask) */
+    {NULL, UA_VARIANT_DATA, 0, NULL, 0, NULL},           /* value */
+    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_BASEDATATYPE}}, /* dataType */
+    UA_VALUERANK_ANY,                                    /* valueRank */
+    0,
+    NULL, /* arrayDimensions */
+    false /* isAbstract */
 };
 
 const UA_ReferenceTypeAttributes UA_ReferenceTypeAttributes_default = {
     0,                      /* specifiedAttributes */
     {{0, NULL}, {0, NULL}}, /* displayName */
     {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    false,                  /* isAbstract */
-    false,                  /* symmetric */
-    {{0, NULL}, {0, NULL}}  /* inverseName */
+    0,
+    0,                     /* writeMask (userWriteMask) */
+    false,                 /* isAbstract */
+    false,                 /* symmetric */
+    {{0, NULL}, {0, NULL}} /* inverseName */
 };
 
 const UA_DataTypeAttributes UA_DataTypeAttributes_default = {
     0,                      /* specifiedAttributes */
     {{0, NULL}, {0, NULL}}, /* displayName */
     {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    false                   /* isAbstract */
+    0,
+    0,    /* writeMask (userWriteMask) */
+    false /* isAbstract */
 };
 
 const UA_ViewAttributes UA_ViewAttributes_default = {
     0,                      /* specifiedAttributes */
     {{0, NULL}, {0, NULL}}, /* displayName */
     {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    false,                  /* containsNoLoops */
-    0                       /* eventNotifier */
+    0,
+    0,     /* writeMask (userWriteMask) */
+    false, /* containsNoLoops */
+    0      /* eventNotifier */
 };
-

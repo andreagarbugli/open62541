@@ -17,7 +17,8 @@
 /* There is no UA_Node_new() method here. Creating nodes is part of the
  * NodeStore layer */
 
-void UA_Node_deleteMembers(UA_Node *node) {
+void
+UA_Node_deleteMembers(UA_Node *node) {
     /* Delete standard content */
     UA_NodeId_deleteMembers(&node->nodeId);
     UA_QualifiedName_deleteMembers(&node->browseName);
@@ -29,35 +30,35 @@ void UA_Node_deleteMembers(UA_Node *node) {
 
     /* Delete unique content of the nodeclass */
     switch(node->nodeClass) {
-    case UA_NODECLASS_OBJECT:
-        break;
-    case UA_NODECLASS_METHOD:
-        break;
-    case UA_NODECLASS_OBJECTTYPE:
-        break;
-    case UA_NODECLASS_VARIABLE:
-    case UA_NODECLASS_VARIABLETYPE: {
-        UA_VariableNode *p = (UA_VariableNode*)node;
-        UA_NodeId_deleteMembers(&p->dataType);
-        UA_Array_delete(p->arrayDimensions, p->arrayDimensionsSize,
-                        &UA_TYPES[UA_TYPES_INT32]);
-        p->arrayDimensions = NULL;
-        p->arrayDimensionsSize = 0;
-        if(p->valueSource == UA_VALUESOURCE_DATA)
-            UA_DataValue_deleteMembers(&p->value.data.value);
-        break;
-    }
-    case UA_NODECLASS_REFERENCETYPE: {
-        UA_ReferenceTypeNode *p = (UA_ReferenceTypeNode*)node;
-        UA_LocalizedText_deleteMembers(&p->inverseName);
-        break;
-    }
-    case UA_NODECLASS_DATATYPE:
-        break;
-    case UA_NODECLASS_VIEW:
-        break;
-    default:
-        break;
+        case UA_NODECLASS_OBJECT:
+            break;
+        case UA_NODECLASS_METHOD:
+            break;
+        case UA_NODECLASS_OBJECTTYPE:
+            break;
+        case UA_NODECLASS_VARIABLE:
+        case UA_NODECLASS_VARIABLETYPE: {
+            UA_VariableNode *p = (UA_VariableNode *)node;
+            UA_NodeId_deleteMembers(&p->dataType);
+            UA_Array_delete(p->arrayDimensions, p->arrayDimensionsSize,
+                            &UA_TYPES[UA_TYPES_INT32]);
+            p->arrayDimensions = NULL;
+            p->arrayDimensionsSize = 0;
+            if(p->valueSource == UA_VALUESOURCE_DATA)
+                UA_DataValue_deleteMembers(&p->value.data.value);
+            break;
+        }
+        case UA_NODECLASS_REFERENCETYPE: {
+            UA_ReferenceTypeNode *p = (UA_ReferenceTypeNode *)node;
+            UA_LocalizedText_deleteMembers(&p->inverseName);
+            break;
+        }
+        case UA_NODECLASS_DATATYPE:
+            break;
+        case UA_NODECLASS_VIEW:
+            break;
+        default:
+            break;
     }
 }
 
@@ -69,10 +70,9 @@ UA_ObjectNode_copy(const UA_ObjectNode *src, UA_ObjectNode *dst) {
 
 static UA_StatusCode
 UA_CommonVariableNode_copy(const UA_VariableNode *src, UA_VariableNode *dst) {
-    UA_StatusCode retval = UA_Array_copy(src->arrayDimensions,
-                                         src->arrayDimensionsSize,
-                                         (void**)&dst->arrayDimensions,
-                                         &UA_TYPES[UA_TYPES_INT32]);
+    UA_StatusCode retval =
+        UA_Array_copy(src->arrayDimensions, src->arrayDimensionsSize,
+                      (void **)&dst->arrayDimensions, &UA_TYPES[UA_TYPES_INT32]);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
     dst->arrayDimensionsSize = src->arrayDimensionsSize;
@@ -80,8 +80,7 @@ UA_CommonVariableNode_copy(const UA_VariableNode *src, UA_VariableNode *dst) {
     dst->valueRank = src->valueRank;
     dst->valueSource = src->valueSource;
     if(src->valueSource == UA_VALUESOURCE_DATA) {
-        retval |= UA_DataValue_copy(&src->value.data.value,
-                                    &dst->value.data.value);
+        retval |= UA_DataValue_copy(&src->value.data.value, &dst->value.data.value);
         dst->value.data.callback = src->value.data.callback;
     } else
         dst->value.dataSource = src->value.dataSource;
@@ -98,10 +97,9 @@ UA_VariableNode_copy(const UA_VariableNode *src, UA_VariableNode *dst) {
 }
 
 static UA_StatusCode
-UA_VariableTypeNode_copy(const UA_VariableTypeNode *src,
-                         UA_VariableTypeNode *dst) {
-    UA_StatusCode retval = UA_CommonVariableNode_copy((const UA_VariableNode*)src,
-                                                      (UA_VariableNode*)dst);
+UA_VariableTypeNode_copy(const UA_VariableTypeNode *src, UA_VariableTypeNode *dst) {
+    UA_StatusCode retval =
+        UA_CommonVariableNode_copy((const UA_VariableNode *)src, (UA_VariableNode *)dst);
     dst->isAbstract = src->isAbstract;
     return retval;
 }
@@ -121,10 +119,8 @@ UA_ObjectTypeNode_copy(const UA_ObjectTypeNode *src, UA_ObjectTypeNode *dst) {
 }
 
 static UA_StatusCode
-UA_ReferenceTypeNode_copy(const UA_ReferenceTypeNode *src,
-                          UA_ReferenceTypeNode *dst) {
-    UA_StatusCode retval = UA_LocalizedText_copy(&src->inverseName,
-                                                 &dst->inverseName);
+UA_ReferenceTypeNode_copy(const UA_ReferenceTypeNode *src, UA_ReferenceTypeNode *dst) {
+    UA_StatusCode retval = UA_LocalizedText_copy(&src->inverseName, &dst->inverseName);
     dst->isAbstract = src->isAbstract;
     dst->symmetric = src->symmetric;
     return retval;
@@ -155,6 +151,7 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
     retval |= UA_LocalizedText_copy(&src->description, &dst->description);
     dst->writeMask = src->writeMask;
     dst->context = src->context;
+    dst->constructed = src->constructed;
     if(retval != UA_STATUSCODE_GOOD) {
         UA_Node_deleteMembers(dst);
         return retval;
@@ -163,8 +160,8 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
     /* Copy the references */
     dst->references = NULL;
     if(src->referencesSize > 0) {
-        dst->references = (UA_NodeReferenceKind*)
-            UA_calloc(src->referencesSize, sizeof(UA_NodeReferenceKind));
+        dst->references = (UA_NodeReferenceKind *)UA_calloc(src->referencesSize,
+                                                            sizeof(UA_NodeReferenceKind));
         if(!dst->references) {
             UA_Node_deleteMembers(dst);
             return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -179,8 +176,8 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
             if(retval != UA_STATUSCODE_GOOD)
                 break;
             retval = UA_Array_copy(srefs->targetIds, srefs->targetIdsSize,
-                                    (void**)&drefs->targetIds,
-                                    &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);
+                                   (void **)&drefs->targetIds,
+                                   &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);
             if(retval != UA_STATUSCODE_GOOD)
                 break;
             drefs->targetIdsSize = srefs->targetIdsSize;
@@ -193,32 +190,37 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
 
     /* Copy unique content of the nodeclass */
     switch(src->nodeClass) {
-    case UA_NODECLASS_OBJECT:
-        retval = UA_ObjectNode_copy((const UA_ObjectNode*)src, (UA_ObjectNode*)dst);
-        break;
-    case UA_NODECLASS_VARIABLE:
-        retval = UA_VariableNode_copy((const UA_VariableNode*)src, (UA_VariableNode*)dst);
-        break;
-    case UA_NODECLASS_METHOD:
-        retval = UA_MethodNode_copy((const UA_MethodNode*)src, (UA_MethodNode*)dst);
-        break;
-    case UA_NODECLASS_OBJECTTYPE:
-        retval = UA_ObjectTypeNode_copy((const UA_ObjectTypeNode*)src, (UA_ObjectTypeNode*)dst);
-        break;
-    case UA_NODECLASS_VARIABLETYPE:
-        retval = UA_VariableTypeNode_copy((const UA_VariableTypeNode*)src, (UA_VariableTypeNode*)dst);
-        break;
-    case UA_NODECLASS_REFERENCETYPE:
-        retval = UA_ReferenceTypeNode_copy((const UA_ReferenceTypeNode*)src, (UA_ReferenceTypeNode*)dst);
-        break;
-    case UA_NODECLASS_DATATYPE:
-        retval = UA_DataTypeNode_copy((const UA_DataTypeNode*)src, (UA_DataTypeNode*)dst);
-        break;
-    case UA_NODECLASS_VIEW:
-        retval = UA_ViewNode_copy((const UA_ViewNode*)src, (UA_ViewNode*)dst);
-        break;
-    default:
-        break;
+        case UA_NODECLASS_OBJECT:
+            retval = UA_ObjectNode_copy((const UA_ObjectNode *)src, (UA_ObjectNode *)dst);
+            break;
+        case UA_NODECLASS_VARIABLE:
+            retval = UA_VariableNode_copy((const UA_VariableNode *)src,
+                                          (UA_VariableNode *)dst);
+            break;
+        case UA_NODECLASS_METHOD:
+            retval = UA_MethodNode_copy((const UA_MethodNode *)src, (UA_MethodNode *)dst);
+            break;
+        case UA_NODECLASS_OBJECTTYPE:
+            retval = UA_ObjectTypeNode_copy((const UA_ObjectTypeNode *)src,
+                                            (UA_ObjectTypeNode *)dst);
+            break;
+        case UA_NODECLASS_VARIABLETYPE:
+            retval = UA_VariableTypeNode_copy((const UA_VariableTypeNode *)src,
+                                              (UA_VariableTypeNode *)dst);
+            break;
+        case UA_NODECLASS_REFERENCETYPE:
+            retval = UA_ReferenceTypeNode_copy((const UA_ReferenceTypeNode *)src,
+                                               (UA_ReferenceTypeNode *)dst);
+            break;
+        case UA_NODECLASS_DATATYPE:
+            retval = UA_DataTypeNode_copy((const UA_DataTypeNode *)src,
+                                          (UA_DataTypeNode *)dst);
+            break;
+        case UA_NODECLASS_VIEW:
+            retval = UA_ViewNode_copy((const UA_ViewNode *)src, (UA_ViewNode *)dst);
+            break;
+        default:
+            break;
     }
 
     if(retval != UA_STATUSCODE_GOOD)
@@ -260,7 +262,7 @@ UA_Node_copy_alloc(const UA_Node *src) {
             return NULL;
     }
 
-    UA_Node *dst = (UA_Node*)UA_calloc(1,nodesize);
+    UA_Node *dst = (UA_Node *)UA_calloc(1, nodesize);
     if(!dst)
         return NULL;
 
@@ -281,20 +283,28 @@ static UA_StatusCode
 copyStandardAttributes(UA_Node *node, const UA_NodeAttributes *attr) {
     /* retval  = UA_NodeId_copy(&item->requestedNewNodeId.nodeId, &node->nodeId); */
     /* retval |= UA_QualifiedName_copy(&item->browseName, &node->browseName); */
-    UA_StatusCode retval = UA_LocalizedText_copy(&attr->displayName,
-                                                 &node->displayName);
-    retval |= UA_LocalizedText_copy(&attr->description, &node->description);
+
+    UA_StatusCode retval;
+    /* The new nodeset format has optional display name.
+     * See https://github.com/open62541/open62541/issues/2627
+     * If display name is NULL, then we take the name part of the browse name */
+    if(attr->displayName.text.length == 0) {
+        retval = UA_String_copy(&node->browseName.name, &node->displayName.text);
+    } else {
+        retval = UA_LocalizedText_copy(&attr->displayName, &node->displayName);
+        retval |= UA_LocalizedText_copy(&attr->description, &node->description);
+    }
+
     node->writeMask = attr->writeMask;
     return retval;
 }
 
 static UA_StatusCode
-copyCommonVariableAttributes(UA_VariableNode *node,
-                             const UA_VariableAttributes *attr) {
+copyCommonVariableAttributes(UA_VariableNode *node, const UA_VariableAttributes *attr) {
     /* Copy the array dimensions */
     UA_StatusCode retval =
         UA_Array_copy(attr->arrayDimensions, attr->arrayDimensionsSize,
-                      (void**)&node->arrayDimensions, &UA_TYPES[UA_TYPES_UINT32]);
+                      (void **)&node->arrayDimensions, &UA_TYPES[UA_TYPES_UINT32]);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
     node->arrayDimensionsSize = attr->arrayDimensionsSize;
@@ -306,42 +316,45 @@ copyCommonVariableAttributes(UA_VariableNode *node,
     /* Copy the value */
     node->valueSource = UA_VALUESOURCE_DATA;
     UA_NodeId extensionObject = UA_NODEID_NUMERIC(0, UA_NS0ID_STRUCTURE);
-    /* if we have an extension object which is still encoded (e.g. from the nodeset compiler)
-     * we need to decode it and set the decoded value instead of the encoded object */
+    /* If we have an extension object which is still encoded (e.g. from the
+     * nodeset compiler) we need to decode it and set the decoded value instead
+     * of the encoded object */
     UA_Boolean valueSet = false;
-    if(attr->value.type != NULL && UA_NodeId_equal(&attr->value.type->typeId, &extensionObject)) {
-
-        if (attr->value.data == UA_EMPTY_ARRAY_SENTINEL) {
-            /* do nothing since we got an empty array of extension objects */
+    if(attr->value.type != NULL &&
+       UA_NodeId_equal(&attr->value.type->typeId, &extensionObject)) {
+        /* Do nothing since we got an empty array of extension objects */
+        if(attr->value.data == UA_EMPTY_ARRAY_SENTINEL)
             return UA_STATUSCODE_GOOD;
-        }
 
         const UA_ExtensionObject *obj = (const UA_ExtensionObject *)attr->value.data;
         if(obj && obj->encoding == UA_EXTENSIONOBJECT_ENCODED_BYTESTRING) {
-
             /* TODO: Once we generate type description in the nodeset compiler,
              * UA_findDatatypeByBinary can be made internal to the decoding
              * layer. */
-            const UA_DataType *type = UA_findDataTypeByBinary(&obj->content.encoded.typeId);
+            const UA_DataType *type =
+                UA_findDataTypeByBinary(&obj->content.encoded.typeId);
 
             if(type) {
                 void *dst = UA_Array_new(attr->value.arrayLength, type);
-                if (!dst) {
+                if(!dst) {
                     return UA_STATUSCODE_BADOUTOFMEMORY;
                 }
                 uint8_t *tmpPos = (uint8_t *)dst;
 
-                for(size_t i=0; i<attr->value.arrayLength; i++) {
-                    size_t offset =0;
-                    const UA_ExtensionObject *curr = &((const UA_ExtensionObject *)attr->value.data)[i];
-                    UA_StatusCode ret = UA_decodeBinary(&curr->content.encoded.body, &offset, tmpPos, type, NULL);
+                for(size_t i = 0; i < attr->value.arrayLength; i++) {
+                    size_t offset = 0;
+                    const UA_ExtensionObject *curr =
+                        &((const UA_ExtensionObject *)attr->value.data)[i];
+                    UA_StatusCode ret = UA_decodeBinary(&curr->content.encoded.body,
+                                                        &offset, tmpPos, type, NULL);
                     if(ret != UA_STATUSCODE_GOOD) {
                         return ret;
                     }
                     tmpPos += type->memSize;
                 }
 
-                UA_Variant_setArray(&node->value.data.value.value, dst, attr->value.arrayLength, type);
+                UA_Variant_setArray(&node->value.data.value.value, dst,
+                                    attr->value.arrayLength, type);
                 valueSet = true;
             }
         }
@@ -356,8 +369,7 @@ copyCommonVariableAttributes(UA_VariableNode *node,
 }
 
 static UA_StatusCode
-copyVariableNodeAttributes(UA_VariableNode *vnode,
-                           const UA_VariableAttributes *attr) {
+copyVariableNodeAttributes(UA_VariableNode *vnode, const UA_VariableAttributes *attr) {
     vnode->accessLevel = attr->accessLevel;
     vnode->historizing = attr->historizing;
     vnode->minimumSamplingInterval = attr->minimumSamplingInterval;
@@ -368,8 +380,8 @@ static UA_StatusCode
 copyVariableTypeNodeAttributes(UA_VariableTypeNode *vtnode,
                                const UA_VariableTypeAttributes *attr) {
     vtnode->isAbstract = attr->isAbstract;
-    return copyCommonVariableAttributes((UA_VariableNode*)vtnode,
-                                        (const UA_VariableAttributes*)attr);
+    return copyCommonVariableAttributes((UA_VariableNode *)vtnode,
+                                        (const UA_VariableAttributes *)attr);
 }
 
 static UA_StatusCode
@@ -401,79 +413,78 @@ copyViewNodeAttributes(UA_ViewNode *vnode, const UA_ViewAttributes *attr) {
 }
 
 static UA_StatusCode
-copyDataTypeNodeAttributes(UA_DataTypeNode *dtnode,
-                           const UA_DataTypeAttributes *attr) {
+copyDataTypeNodeAttributes(UA_DataTypeNode *dtnode, const UA_DataTypeAttributes *attr) {
     dtnode->isAbstract = attr->isAbstract;
     return UA_STATUSCODE_GOOD;
 }
 
 static UA_StatusCode
-copyMethodNodeAttributes(UA_MethodNode *mnode,
-                         const UA_MethodAttributes *attr) {
+copyMethodNodeAttributes(UA_MethodNode *mnode, const UA_MethodAttributes *attr) {
     mnode->executable = attr->executable;
     return UA_STATUSCODE_GOOD;
 }
 
-#define CHECK_ATTRIBUTES(TYPE)                           \
-    if(attributeType != &UA_TYPES[UA_TYPES_##TYPE]) {    \
-        retval = UA_STATUSCODE_BADNODEATTRIBUTESINVALID; \
-        break;                                           \
+#define CHECK_ATTRIBUTES(TYPE)                                                           \
+    if(attributeType != &UA_TYPES[UA_TYPES_##TYPE]) {                                    \
+        retval = UA_STATUSCODE_BADNODEATTRIBUTESINVALID;                                 \
+        break;                                                                           \
     }
 
 UA_StatusCode
 UA_Node_setAttributes(UA_Node *node, const void *attributes,
                       const UA_DataType *attributeType) {
-
     /* Copy the attributes into the node */
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     switch(node->nodeClass) {
-    case UA_NODECLASS_OBJECT:
-        CHECK_ATTRIBUTES(OBJECTATTRIBUTES);
-        retval = copyObjectNodeAttributes((UA_ObjectNode*)node,
-                                          (const UA_ObjectAttributes*)attributes);
-        break;
-    case UA_NODECLASS_VARIABLE:
-        CHECK_ATTRIBUTES(VARIABLEATTRIBUTES);
-        retval = copyVariableNodeAttributes((UA_VariableNode*)node,
-                                            (const UA_VariableAttributes*)attributes);
-        break;
-    case UA_NODECLASS_OBJECTTYPE:
-        CHECK_ATTRIBUTES(OBJECTTYPEATTRIBUTES);
-        retval = copyObjectTypeNodeAttributes((UA_ObjectTypeNode*)node,
-                                              (const UA_ObjectTypeAttributes*)attributes);
-        break;
-    case UA_NODECLASS_VARIABLETYPE:
-        CHECK_ATTRIBUTES(VARIABLETYPEATTRIBUTES);
-        retval = copyVariableTypeNodeAttributes((UA_VariableTypeNode*)node,
-                                                (const UA_VariableTypeAttributes*)attributes);
-        break;
-    case UA_NODECLASS_REFERENCETYPE:
-        CHECK_ATTRIBUTES(REFERENCETYPEATTRIBUTES);
-        retval = copyReferenceTypeNodeAttributes((UA_ReferenceTypeNode*)node,
-                                                 (const UA_ReferenceTypeAttributes*)attributes);
-        break;
-    case UA_NODECLASS_DATATYPE:
-        CHECK_ATTRIBUTES(DATATYPEATTRIBUTES);
-        retval = copyDataTypeNodeAttributes((UA_DataTypeNode*)node,
-                                            (const UA_DataTypeAttributes*)attributes);
-        break;
-    case UA_NODECLASS_VIEW:
-        CHECK_ATTRIBUTES(VIEWATTRIBUTES);
-        retval = copyViewNodeAttributes((UA_ViewNode*)node,
-                                        (const UA_ViewAttributes*)attributes);
-        break;
-    case UA_NODECLASS_METHOD:
-        CHECK_ATTRIBUTES(METHODATTRIBUTES);
-        retval = copyMethodNodeAttributes((UA_MethodNode*)node,
-                                          (const UA_MethodAttributes*)attributes);
-        break;
-    case UA_NODECLASS_UNSPECIFIED:
-    default:
-        retval = UA_STATUSCODE_BADNODECLASSINVALID;
+        case UA_NODECLASS_OBJECT:
+            CHECK_ATTRIBUTES(OBJECTATTRIBUTES);
+            retval = copyObjectNodeAttributes((UA_ObjectNode *)node,
+                                              (const UA_ObjectAttributes *)attributes);
+            break;
+        case UA_NODECLASS_VARIABLE:
+            CHECK_ATTRIBUTES(VARIABLEATTRIBUTES);
+            retval = copyVariableNodeAttributes(
+                (UA_VariableNode *)node, (const UA_VariableAttributes *)attributes);
+            break;
+        case UA_NODECLASS_OBJECTTYPE:
+            CHECK_ATTRIBUTES(OBJECTTYPEATTRIBUTES);
+            retval = copyObjectTypeNodeAttributes(
+                (UA_ObjectTypeNode *)node, (const UA_ObjectTypeAttributes *)attributes);
+            break;
+        case UA_NODECLASS_VARIABLETYPE:
+            CHECK_ATTRIBUTES(VARIABLETYPEATTRIBUTES);
+            retval = copyVariableTypeNodeAttributes(
+                (UA_VariableTypeNode *)node,
+                (const UA_VariableTypeAttributes *)attributes);
+            break;
+        case UA_NODECLASS_REFERENCETYPE:
+            CHECK_ATTRIBUTES(REFERENCETYPEATTRIBUTES);
+            retval = copyReferenceTypeNodeAttributes(
+                (UA_ReferenceTypeNode *)node,
+                (const UA_ReferenceTypeAttributes *)attributes);
+            break;
+        case UA_NODECLASS_DATATYPE:
+            CHECK_ATTRIBUTES(DATATYPEATTRIBUTES);
+            retval = copyDataTypeNodeAttributes(
+                (UA_DataTypeNode *)node, (const UA_DataTypeAttributes *)attributes);
+            break;
+        case UA_NODECLASS_VIEW:
+            CHECK_ATTRIBUTES(VIEWATTRIBUTES);
+            retval = copyViewNodeAttributes((UA_ViewNode *)node,
+                                            (const UA_ViewAttributes *)attributes);
+            break;
+        case UA_NODECLASS_METHOD:
+            CHECK_ATTRIBUTES(METHODATTRIBUTES);
+            retval = copyMethodNodeAttributes((UA_MethodNode *)node,
+                                              (const UA_MethodAttributes *)attributes);
+            break;
+        case UA_NODECLASS_UNSPECIFIED:
+        default:
+            retval = UA_STATUSCODE_BADNODECLASSINVALID;
     }
 
     if(retval == UA_STATUSCODE_GOOD)
-        retval = copyStandardAttributes(node, (const UA_NodeAttributes*)attributes);
+        retval = copyStandardAttributes(node, (const UA_NodeAttributes *)attributes);
     if(retval != UA_STATUSCODE_GOOD)
         UA_Node_deleteMembers(node);
     return retval;
@@ -485,9 +496,8 @@ UA_Node_setAttributes(UA_Node *node, const void *attributes,
 
 static UA_StatusCode
 addReferenceTarget(UA_NodeReferenceKind *refs, const UA_ExpandedNodeId *target) {
-    UA_ExpandedNodeId *targets =
-        (UA_ExpandedNodeId*) UA_realloc(refs->targetIds,
-                                        sizeof(UA_ExpandedNodeId) * (refs->targetIdsSize+1));
+    UA_ExpandedNodeId *targets = (UA_ExpandedNodeId *)UA_realloc(
+        refs->targetIds, sizeof(UA_ExpandedNodeId) * (refs->targetIdsSize + 1));
     if(!targets)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
@@ -507,9 +517,8 @@ addReferenceTarget(UA_NodeReferenceKind *refs, const UA_ExpandedNodeId *target) 
 
 static UA_StatusCode
 addReferenceKind(UA_Node *node, const UA_AddReferencesItem *item) {
-    UA_NodeReferenceKind *refs =
-        (UA_NodeReferenceKind*)UA_realloc(node->references,
-                                          sizeof(UA_NodeReferenceKind) * (node->referencesSize+1));
+    UA_NodeReferenceKind *refs = (UA_NodeReferenceKind *)UA_realloc(
+        node->references, sizeof(UA_NodeReferenceKind) * (node->referencesSize + 1));
     if(!refs)
         return UA_STATUSCODE_BADOUTOFMEMORY;
     node->references = refs;
@@ -517,7 +526,8 @@ addReferenceKind(UA_Node *node, const UA_AddReferencesItem *item) {
     memset(newRef, 0, sizeof(UA_NodeReferenceKind));
 
     newRef->isInverse = !item->isForward;
-    UA_StatusCode retval = UA_NodeId_copy(&item->referenceTypeId, &newRef->referenceTypeId);
+    UA_StatusCode retval =
+        UA_NodeId_copy(&item->referenceTypeId, &newRef->referenceTypeId);
     retval |= addReferenceTarget(newRef, &item->targetNodeId);
 
     if(retval == UA_STATUSCODE_GOOD) {
@@ -537,8 +547,8 @@ UA_Node_addReference(UA_Node *node, const UA_AddReferencesItem *item) {
     UA_NodeReferenceKind *existingRefs = NULL;
     for(size_t i = 0; i < node->referencesSize; ++i) {
         UA_NodeReferenceKind *refs = &node->references[i];
-        if(refs->isInverse != item->isForward
-                && UA_NodeId_equal(&refs->referenceTypeId, &item->referenceTypeId)) {
+        if(refs->isInverse != item->isForward &&
+           UA_NodeId_equal(&refs->referenceTypeId, &item->referenceTypeId)) {
             existingRefs = refs;
             break;
         }
@@ -558,14 +568,14 @@ UA_Node_addReference(UA_Node *node, const UA_AddReferencesItem *item) {
 UA_StatusCode
 UA_Node_deleteReference(UA_Node *node, const UA_DeleteReferencesItem *item) {
     for(size_t i = node->referencesSize; i > 0; --i) {
-        UA_NodeReferenceKind *refs = &node->references[i-1];
+        UA_NodeReferenceKind *refs = &node->references[i - 1];
         if(item->isForward == refs->isInverse)
             continue;
         if(!UA_NodeId_equal(&item->referenceTypeId, &refs->referenceTypeId))
             continue;
 
         for(size_t j = refs->targetIdsSize; j > 0; --j) {
-            UA_ExpandedNodeId *target = &refs->targetIds[j-1];
+            UA_ExpandedNodeId *target = &refs->targetIds[j - 1];
             if(!UA_NodeId_equal(&item->targetNodeId.nodeId, &target->nodeId))
                 continue;
 
@@ -575,9 +585,9 @@ UA_Node_deleteReference(UA_Node *node, const UA_DeleteReferencesItem *item) {
 
             /* One matching target remaining */
             if(refs->targetIdsSize > 0) {
-                if(j-1 != refs->targetIdsSize) // avoid valgrind error: Source
-                                               // and destination overlap in
-                                               // memcpy
+                if(j - 1 != refs->targetIdsSize)  // avoid valgrind error: Source
+                                                  // and destination overlap in
+                                                  // memcpy
                     *target = refs->targetIds[refs->targetIdsSize];
                 return UA_STATUSCODE_GOOD;
             }
@@ -587,10 +597,10 @@ UA_Node_deleteReference(UA_Node *node, const UA_DeleteReferencesItem *item) {
             UA_NodeId_deleteMembers(&refs->referenceTypeId);
             node->referencesSize--;
             if(node->referencesSize > 0) {
-                if(i-1 != node->referencesSize) // avoid valgrind error: Source
-                                                // and destination overlap in
-                                                // memcpy
-                    node->references[i-1] = node->references[node->referencesSize];
+                if(i - 1 != node->referencesSize)  // avoid valgrind error: Source
+                                                   // and destination overlap in
+                                                   // memcpy
+                    node->references[i - 1] = node->references[node->referencesSize];
                 return UA_STATUSCODE_GOOD;
             }
 
@@ -605,13 +615,13 @@ UA_Node_deleteReference(UA_Node *node, const UA_DeleteReferencesItem *item) {
 
 void
 UA_Node_deleteReferencesSubset(UA_Node *node, size_t referencesSkipSize,
-                               UA_NodeId* referencesSkip) {
+                               UA_NodeId *referencesSkip) {
     /* Nothing to do */
     if(node->referencesSize == 0 || node->references == NULL)
         return;
 
     for(size_t i = node->referencesSize; i > 0; --i) {
-        UA_NodeReferenceKind *refs = &node->references[i-1];
+        UA_NodeReferenceKind *refs = &node->references[i - 1];
 
         /* Shall we keep the references of this type? */
         UA_Boolean skip = false;
@@ -625,14 +635,15 @@ UA_Node_deleteReferencesSubset(UA_Node *node, size_t referencesSkipSize,
             continue;
 
         /* Remove references */
-        UA_Array_delete(refs->targetIds, refs->targetIdsSize, &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);
+        UA_Array_delete(refs->targetIds, refs->targetIdsSize,
+                        &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);
         UA_NodeId_deleteMembers(&refs->referenceTypeId);
         node->referencesSize--;
 
         /* Move last references-kind entry to this position */
-        if(i-1 == node->referencesSize) /* Don't memcpy over the same position */
+        if(i - 1 == node->referencesSize) /* Don't memcpy over the same position */
             continue;
-        node->references[i-1] = node->references[node->referencesSize];
+        node->references[i - 1] = node->references[node->referencesSize];
     }
 
     if(node->referencesSize == 0) {
@@ -641,13 +652,14 @@ UA_Node_deleteReferencesSubset(UA_Node *node, size_t referencesSkipSize,
         node->references = NULL;
     } else {
         /* Realloc to save memory */
-        UA_NodeReferenceKind *refs = (UA_NodeReferenceKind*)
-            UA_realloc(node->references, sizeof(UA_NodeReferenceKind) * node->referencesSize);
+        UA_NodeReferenceKind *refs = (UA_NodeReferenceKind *)UA_realloc(
+            node->references, sizeof(UA_NodeReferenceKind) * node->referencesSize);
         if(refs) /* Do nothing if realloc fails */
             node->references = refs;
     }
 }
 
-void UA_Node_deleteReferences(UA_Node *node) {
+void
+UA_Node_deleteReferences(UA_Node *node) {
     UA_Node_deleteReferencesSubset(node, 0, NULL);
 }

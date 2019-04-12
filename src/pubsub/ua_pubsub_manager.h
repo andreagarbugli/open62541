@@ -8,15 +8,17 @@
 #ifndef UA_PUBSUB_MANAGER_H_
 #define UA_PUBSUB_MANAGER_H_
 
+#include <open62541/server_pubsub.h>
+
 #include "ua_pubsub.h"
-#include "ua_server_pubsub.h"
 
 _UA_BEGIN_DECLS
 
 #ifdef UA_ENABLE_PUBSUB /* conditional compilation */
 
-typedef struct UA_PubSubManager{
-    //Connections and PublishedDataSets can exist alone (own lifecycle) -> top level components
+typedef struct UA_PubSubManager {
+    // Connections and PublishedDataSets can exist alone (own lifecycle) -> top level
+    // components
     size_t connectionsSize;
     UA_PubSubConnection *connections;
     size_t publishedDataSetsSize;
@@ -37,7 +39,8 @@ UA_PubSubConfigurationVersionTimeDifference(void);
 /***********************************/
 UA_StatusCode
 UA_PubSubManager_addRepeatedCallback(UA_Server *server, UA_ServerCallback callback,
-                                     void *data, UA_Double interval_ms, UA_UInt64 *callbackId);
+                                     void *data, UA_Double interval_ms,
+                                     UA_UInt64 *callbackId);
 UA_StatusCode
 UA_PubSubManager_changeRepeatedCallbackInterval(UA_Server *server, UA_UInt64 callbackId,
                                                 UA_Double interval_ms);

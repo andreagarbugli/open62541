@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2014-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2014-2016 (c) Sten Grüner
@@ -16,13 +16,14 @@
 
 #include "ua_workqueue.h"
 
-void UA_WorkQueue_init(UA_WorkQueue *wq) {
+void
+UA_WorkQueue_init(UA_WorkQueue *wq) {
     /* Initialized the linked list for delayed callbacks */
     SIMPLEQ_INIT(&wq->delayedCallbacks);
 
 #ifdef UA_ENABLE_MULTITHREADING
     wq->delayedCallbacks_checkpoint = NULL;
-    pthread_mutex_init(&wq->delayedCallbacks_accessMutex,  NULL);
+    pthread_mutex_init(&wq->delayedCallbacks_accessMutex, NULL);
 
     /* Initialize the dispatch queue for worker threads */
     SIMPLEQ_INIT(&wq->dispatchQueue);
@@ -34,10 +35,12 @@ void UA_WorkQueue_init(UA_WorkQueue *wq) {
 
 #ifdef UA_ENABLE_MULTITHREADING
 /* Forward declaration */
-static void UA_WorkQueue_manuallyProcessDelayed(UA_WorkQueue *wq);
+static void
+UA_WorkQueue_manuallyProcessDelayed(UA_WorkQueue *wq);
 #endif
 
-void UA_WorkQueue_cleanup(UA_WorkQueue *wq) {
+void
+UA_WorkQueue_cleanup(UA_WorkQueue *wq) {
 #ifdef UA_ENABLE_MULTITHREADING
     /* Shut down workers */
     UA_WorkQueue_stop(wq);
@@ -118,9 +121,9 @@ UA_StatusCode
 UA_WorkQueue_start(UA_WorkQueue *wq, size_t workersCount) {
     if(wq->workersSize > 0 || workersCount == 0)
         return UA_STATUSCODE_BADINTERNALERROR;
-    
+
     /* Create the worker array */
-    wq->workers = (UA_Worker*)UA_calloc(workersCount, sizeof(UA_Worker));
+    wq->workers = (UA_Worker *)UA_calloc(workersCount, sizeof(UA_Worker));
     if(!wq->workers)
         return UA_STATUSCODE_BADOUTOFMEMORY;
     wq->workersSize = workersCount;
@@ -131,12 +134,13 @@ UA_WorkQueue_start(UA_WorkQueue *wq, size_t workersCount) {
         w->queue = wq;
         w->counter = 0;
         w->running = true;
-        pthread_create(&w->thread, NULL, (void* (*)(void*))workerLoop, w);
+        pthread_create(&w->thread, NULL, (void *(*)(void *))workerLoop, w);
     }
     return UA_STATUSCODE_GOOD;
 }
 
-void UA_WorkQueue_stop(UA_WorkQueue *wq) {
+void
+UA_WorkQueue_stop(UA_WorkQueue *wq) {
     if(wq->workersSize == 0)
         return;
 
@@ -156,11 +160,13 @@ void UA_WorkQueue_stop(UA_WorkQueue *wq) {
     wq->workersSize = 0;
 }
 
-void UA_WorkQueue_enqueue(UA_WorkQueue *wq, UA_ApplicationCallback cb,
-                          void *application, void *data) {
-    UA_DelayedCallback *dc = (UA_DelayedCallback*)UA_malloc(sizeof(UA_DelayedCallback));
+void
+UA_WorkQueue_enqueue(UA_WorkQueue *wq, UA_ApplicationCallback cb, void *application,
+                     void *data) {
+    UA_DelayedCallback *dc = (UA_DelayedCallback *)UA_malloc(sizeof(UA_DelayedCallback));
     if(!dc) {
-        cb(application, data); /* Execute immediately if the memory could not be allocated */
+        cb(application,
+           data); /* Execute immediately if the memory could not be allocated */
         return;
     }
 
@@ -246,7 +252,8 @@ UA_WorkQueue_enqueueDelayed(UA_WorkQueue *wq, UA_DelayedCallback *cb) {
 }
 
 /* Assumes all workers are shut down */
-void UA_WorkQueue_manuallyProcessDelayed(UA_WorkQueue *wq) {
+void
+UA_WorkQueue_manuallyProcessDelayed(UA_WorkQueue *wq) {
     UA_DelayedCallback *dc, *dc_tmp;
     SIMPLEQ_FOREACH_SAFE(dc, &wq->delayedCallbacks, next, dc_tmp) {
         SIMPLEQ_REMOVE_HEAD(&wq->delayedCallbacks, next);

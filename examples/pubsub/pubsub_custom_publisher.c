@@ -18,15 +18,13 @@
 #include <sched.h>
 #include <signal.h>
 #include <time.h>
-
-#include <ua_server_pubsub.h>
-#include <ua_config_default.h>
-#include <ua_log_stdout.h>
-#include <ua_network_pubsub_udp.h>
-#include <ua_pubsub_manager.h>
 #include <asm/types.h>
 #include <poll.h>
-#include <ua_pubsub_networkmessage.h>
+
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
+#include <open62541/plugin/log_stdout.h>
+#include <open62541/plugin/pubsub_udp.h>
 
 #define ONE_SEC 1000 * 1000 * 1000
 
@@ -42,6 +40,10 @@ UA_WriterGroupConfig writerGroupConfig;
 void *publisherTBS(void *args);
 
 void normalizeTimeSpec(struct timespec *timespec);
+
+UA_StatusCode
+UA_PubSubManager_addRepeatedCallback(UA_Server *server, UA_ServerCallback callback,
+                                     void *data, UA_Double interval_us, UA_UInt64 *callbackId);
 
 UA_Boolean running = true;
 

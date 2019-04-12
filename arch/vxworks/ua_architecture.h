@@ -13,39 +13,39 @@
 #include "ua_architecture_base.h"
 
 #include <errno.h>
+#include <hostLib.h>
+#include <netdb.h>
+#include <selectLib.h>
 #include <time.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <netdb.h>
 #include <sys/ioctl.h>
 
-#include <hostLib.h>
-#include <selectLib.h>
-
-#define UA_sleep_ms(X)                            \
- {                                                \
- struct timespec timeToSleep;                     \
-   timeToSleep.tv_sec = X / 1000;                 \
-   timeToSleep.tv_nsec = 1000000 * (X % 1000);    \
-   nanosleep(&timeToSleep, NULL);                 \
- }
+#define UA_sleep_ms(X)                                                                   \
+    {                                                                                    \
+        struct timespec timeToSleep;                                                     \
+        timeToSleep.tv_sec = X / 1000;                                                   \
+        timeToSleep.tv_nsec = 1000000 * (X % 1000);                                      \
+        nanosleep(&timeToSleep, NULL);                                                   \
+    }
 
 #ifdef UINT32_C
-# undef UINT32_C
+#undef UINT32_C
 #endif
 
 #define UINT32_C(x) ((x) + (UINT32_MAX - UINT32_MAX))
 
 #ifdef UA_BINARY_OVERLAYABLE_FLOAT
-# undef UA_BINARY_OVERLAYABLE_FLOAT
+#undef UA_BINARY_OVERLAYABLE_FLOAT
 #endif
 #define UA_BINARY_OVERLAYABLE_FLOAT 1
 
 #define OPTVAL_TYPE int
 
 #include <fcntl.h>
-#include <unistd.h> // read, write, close
+#include <unistd.h>  // read, write, close
+
 #include <netinet/tcp.h>
 
 #define UA_fd_set(fd, fds) FD_SET((unsigned int)fd, fds)
@@ -87,7 +87,7 @@
 #define UA_gethostname gethostname
 #define UA_inet_pton inet_pton
 #if UA_IPV6
-# define UA_if_nametoindex if_nametoindex
+#define UA_if_nametoindex if_nametoindex
 #endif
 
 #include <stdlib.h>
@@ -99,14 +99,16 @@
 #include <stdio.h>
 #define UA_snprintf snprintf
 
-#define UA_LOG_SOCKET_ERRNO_WRAP(LOG) { \
-    char *errno_str = strerror(errno); \
-    LOG; \
-}
-#define UA_LOG_SOCKET_ERRNO_GAI_WRAP(LOG) { \
-    char *errno_str = gai_strerror(errno); \
-    LOG; \
-}
+#define UA_LOG_SOCKET_ERRNO_WRAP(LOG)                                                    \
+    {                                                                                    \
+        char *errno_str = strerror(errno);                                               \
+        LOG;                                                                             \
+    }
+#define UA_LOG_SOCKET_ERRNO_GAI_WRAP(LOG)                                                \
+    {                                                                                    \
+        char *errno_str = gai_strerror(errno);                                           \
+        LOG;                                                                             \
+    }
 
 #include "ua_architecture_functions.h"
 

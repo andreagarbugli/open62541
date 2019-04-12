@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2014-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2014, 2017 (c) Florian Palm
@@ -15,8 +15,8 @@
 #define UA_UTIL_H_
 
 #define UA_INTERNAL
-#include "ua_util.h"
-#include "ua_types.h"
+#include <open62541/types.h>
+#include <open62541/util.h>
 
 _UA_BEGIN_DECLS
 
@@ -42,7 +42,8 @@ typedef UA_StatusCode status;
  * ----------------- */
 
 #ifdef UA_DEBUG_DUMP_PKGS
-void UA_EXPORT UA_dump_hex_pkg(UA_Byte* buffer, size_t bufferLen);
+void UA_EXPORT
+UA_dump_hex_pkg(UA_Byte *buffer, size_t bufferLen);
 #endif
 
 _UA_END_DECLS

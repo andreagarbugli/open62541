@@ -1,27 +1,28 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2017, 2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
  */
 
-#include "ua_util_internal.h"
 #include "ua_timer.h"
+
+#include "ua_util_internal.h"
 
 struct UA_TimerEntry {
     ZIP_ENTRY(UA_TimerEntry) zipfields;
-    UA_DateTime nextTime;                    /* The next time when the callback
-                                              * is to be executed */
-    UA_UInt64 interval;                      /* Interval in 100ns resolution */
-    UA_Boolean repeated;                     /* Repeated callback? */
+    UA_DateTime nextTime; /* The next time when the callback
+                           * is to be executed */
+    UA_UInt64 interval;   /* Interval in 100ns resolution */
+    UA_Boolean repeated;  /* Repeated callback? */
 
     UA_ApplicationCallback callback;
     void *application;
     void *data;
 
     ZIP_ENTRY(UA_TimerEntry) idZipfields;
-    UA_UInt64 id;                            /* Id of the entry */
+    UA_UInt64 id; /* Id of the entry */
 };
 
 /* There may be several entries with the same nextTime in the tree. We give them
@@ -70,7 +71,7 @@ addCallback(UA_Timer *t, UA_ApplicationCallback callback, void *application, voi
         return UA_STATUSCODE_BADINTERNALERROR;
 
     /* Allocate the repeated callback structure */
-    UA_TimerEntry *te = (UA_TimerEntry*)UA_malloc(sizeof(UA_TimerEntry));
+    UA_TimerEntry *te = (UA_TimerEntry *)UA_malloc(sizeof(UA_TimerEntry));
     if(!te)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
@@ -93,9 +94,8 @@ addCallback(UA_Timer *t, UA_ApplicationCallback callback, void *application, voi
 }
 
 UA_StatusCode
-UA_Timer_addTimedCallback(UA_Timer *t, UA_ApplicationCallback callback,
-                          void *application, void *data, UA_DateTime date,
-                          UA_UInt64 *callbackId) {
+UA_Timer_addTimedCallback(UA_Timer *t, UA_ApplicationCallback callback, void *application,
+                          void *data, UA_DateTime date, UA_UInt64 *callbackId) {
     return addCallback(t, callback, application, data, date, 0, false, callbackId);
 }
 
@@ -112,8 +112,8 @@ UA_Timer_addRepeatedCallback(UA_Timer *t, UA_ApplicationCallback callback,
 
     UA_UInt64 interval = (UA_UInt64)(interval_ms * UA_DATETIME_MSEC);
     UA_DateTime nextTime = UA_DateTime_nowMonotonic() + (UA_DateTime)interval;
-    return addCallback(t, callback, application, data, nextTime,
-                       interval, true, callbackId);
+    return addCallback(t, callback, application, data, nextTime, interval, true,
+                       callbackId);
 }
 
 UA_StatusCode
@@ -152,8 +152,7 @@ UA_Timer_process(UA_Timer *t, UA_DateTime nowMonotonic,
                  UA_TimerExecutionCallback executionCallback,
                  void *executionApplication) {
     UA_TimerEntry *first;
-    while((first = ZIP_MIN(UA_TimerZip, &t->root)) &&
-          first->nextTime <= nowMonotonic) {
+    while((first = ZIP_MIN(UA_TimerZip, &t->root)) && first->nextTime <= nowMonotonic) {
         ZIP_REMOVE(UA_TimerZip, &t->root, first);
 
         /* Reinsert / remove to their new position first. Because the callback
@@ -162,8 +161,8 @@ UA_Timer_process(UA_Timer *t, UA_DateTime nowMonotonic,
 
         if(!first->repeated) {
             ZIP_REMOVE(UA_TimerIdZip, &t->idRoot, first);
-            executionCallback(executionApplication, first->callback,
-                              first->application, first->data);
+            executionCallback(executionApplication, first->callback, first->application,
+                              first->data);
             UA_free(first);
             continue;
         }
@@ -174,8 +173,8 @@ UA_Timer_process(UA_Timer *t, UA_DateTime nowMonotonic,
         if(first->nextTime < nowMonotonic)
             first->nextTime = nowMonotonic + 1;
         ZIP_INSERT(UA_TimerZip, &t->root, first, ZIP_RANK(first, zipfields));
-        executionCallback(executionApplication, first->callback,
-                          first->application, first->data);
+        executionCallback(executionApplication, first->callback, first->application,
+                          first->data);
     }
 
     /* Return the timestamp of the earliest next callback */

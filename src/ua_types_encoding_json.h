@@ -9,28 +9,26 @@
 #ifndef UA_TYPES_ENCODING_JSON_H_
 #define UA_TYPES_ENCODING_JSON_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <open62541/types.h>
 
-#include "ua_util_internal.h"
 #include "ua_types_encoding_binary.h"
 #include "ua_types_encoding_json.h"
-#include "ua_types.h"
+#include "ua_util_internal.h"
+
 #include "../deps/jsmn/jsmn.h"
- 
+
+_UA_BEGIN_DECLS
+
 #define TOKENCOUNT 1000
-    
+
 size_t
-UA_calcSizeJson(const void *src, const UA_DataType *type,
-                UA_String *namespaces, size_t namespaceSize,
-                UA_String *serverUris, size_t serverUriSize,
+UA_calcSizeJson(const void *src, const UA_DataType *type, UA_String *namespaces,
+                size_t namespaceSize, UA_String *serverUris, size_t serverUriSize,
                 UA_Boolean useReversible) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
 
 UA_StatusCode
-UA_encodeJson(const void *src, const UA_DataType *type,
-              uint8_t **bufPos, const uint8_t **bufEnd,
-              UA_String *namespaces, size_t namespaceSize,
+UA_encodeJson(const void *src, const UA_DataType *type, uint8_t **bufPos,
+              const uint8_t **bufEnd, UA_String *namespaces, size_t namespaceSize,
               UA_String *serverUris, size_t serverUriSize,
               UA_Boolean useReversible) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
 
@@ -54,24 +52,32 @@ typedef struct {
 
     size_t namespacesSize;
     UA_String *namespaces;
-    
+
     size_t serverUrisSize;
     UA_String *serverUris;
 } CtxJson;
 
-UA_StatusCode writeJsonObjStart(CtxJson *ctx);
-UA_StatusCode writeJsonObjElm(CtxJson *ctx, const char *key,
-                              const void *value, const UA_DataType *type);
-UA_StatusCode writeJsonObjEnd(CtxJson *ctx);
+UA_StatusCode
+writeJsonObjStart(CtxJson *ctx);
+UA_StatusCode
+writeJsonObjElm(CtxJson *ctx, const char *key, const void *value,
+                const UA_DataType *type);
+UA_StatusCode
+writeJsonObjEnd(CtxJson *ctx);
 
-UA_StatusCode writeJsonArrStart(CtxJson *ctx);
-UA_StatusCode writeJsonArrElm(CtxJson *ctx, const void *value,
-                              const UA_DataType *type);
-UA_StatusCode writeJsonArrEnd(CtxJson *ctx);
+UA_StatusCode
+writeJsonArrStart(CtxJson *ctx);
+UA_StatusCode
+writeJsonArrElm(CtxJson *ctx, const void *value, const UA_DataType *type);
+UA_StatusCode
+writeJsonArrEnd(CtxJson *ctx);
 
-UA_StatusCode writeJsonKey(CtxJson *ctx, const char* key);
-UA_StatusCode writeJsonCommaIfNeeded(CtxJson *ctx);
-UA_StatusCode writeJsonNull(CtxJson *ctx);
+UA_StatusCode
+writeJsonKey(CtxJson *ctx, const char *key);
+UA_StatusCode
+writeJsonCommaIfNeeded(CtxJson *ctx);
+UA_StatusCode
+writeJsonNull(CtxJson *ctx);
 
 /* The encoding length is returned in ctx->pos */
 static UA_INLINE UA_StatusCode
@@ -81,8 +87,8 @@ calcJsonObjStart(CtxJson *ctx) {
 }
 
 static UA_INLINE UA_StatusCode
-calcJsonObjElm(CtxJson *ctx, const char *key,
-               const void *value, const UA_DataType *type) {
+calcJsonObjElm(CtxJson *ctx, const char *key, const void *value,
+               const UA_DataType *type) {
     UA_assert(ctx->calcOnly);
     return writeJsonObjElm(ctx, key, value, type);
 }
@@ -100,8 +106,7 @@ calcJsonArrStart(CtxJson *ctx) {
 }
 
 static UA_INLINE UA_StatusCode
-calcJsonArrElm(CtxJson *ctx, const void *value,
-               const UA_DataType *type) {
+calcJsonArrElm(CtxJson *ctx, const void *value, const UA_DataType *type) {
     UA_assert(ctx->calcOnly);
     return writeJsonArrElm(ctx, value, type);
 }
@@ -123,47 +128,50 @@ typedef struct {
     /* Additonal data for special cases such as networkmessage/datasetmessage
      * Currently only used for dataSetWriterIds */
     size_t numCustom;
-    void * custom;
-    size_t* currentCustomIndex;
+    void *custom;
+    size_t *currentCustomIndex;
 } ParseCtx;
 
-typedef UA_StatusCode
-(*encodeJsonSignature)(const void *src, const UA_DataType *type, CtxJson *ctx);
+typedef UA_StatusCode (*encodeJsonSignature)(const void *src, const UA_DataType *type,
+                                             CtxJson *ctx);
 
-typedef UA_StatusCode
-(*decodeJsonSignature)(void *dst, const UA_DataType *type, CtxJson *ctx,
-                       ParseCtx *parseCtx, UA_Boolean moveToken);
+typedef UA_StatusCode (*decodeJsonSignature)(void *dst, const UA_DataType *type,
+                                             CtxJson *ctx, ParseCtx *parseCtx,
+                                             UA_Boolean moveToken);
 
 /* Map for decoding a Json Object. An array of this is passed to the
  * decodeFields function. If the key "fieldName" is found in the json object
  * (mark as found and) decode the value with the "function" and write result
  * into "fieldPointer" (destination). */
 typedef struct {
-    const char * fieldName;
-    void * fieldPointer;
+    const char *fieldName;
+    void *fieldPointer;
     decodeJsonSignature function;
     UA_Boolean found;
     const UA_DataType *type;
 } DecodeEntry;
 
 UA_StatusCode
-decodeFields(CtxJson *ctx, ParseCtx *parseCtx,
-             DecodeEntry *entries, size_t entryCount,
+decodeFields(CtxJson *ctx, ParseCtx *parseCtx, DecodeEntry *entries, size_t entryCount,
              const UA_DataType *type);
 
 UA_StatusCode
-decodeJsonInternal(void *dst, const UA_DataType *type,
-                   CtxJson *ctx, ParseCtx *parseCtx, UA_Boolean moveToken);
+decodeJsonInternal(void *dst, const UA_DataType *type, CtxJson *ctx, ParseCtx *parseCtx,
+                   UA_Boolean moveToken);
 
 /* workaround: TODO generate functions for UA_xxx_decodeJson */
-decodeJsonSignature getDecodeSignature(u8 index);
-UA_StatusCode lookAheadForKey(const char* search, CtxJson *ctx, ParseCtx *parseCtx, size_t *resultIndex);
-jsmntype_t getJsmnType(const ParseCtx *parseCtx);
-UA_StatusCode tokenize(ParseCtx *parseCtx, CtxJson *ctx, const UA_ByteString *src);
-UA_Boolean isJsonNull(const CtxJson *ctx, const ParseCtx *parseCtx);
+decodeJsonSignature
+getDecodeSignature(u8 index);
+UA_StatusCode
+lookAheadForKey(const char *search, CtxJson *ctx, ParseCtx *parseCtx,
+                size_t *resultIndex);
+jsmntype_t
+getJsmnType(const ParseCtx *parseCtx);
+UA_StatusCode
+tokenize(ParseCtx *parseCtx, CtxJson *ctx, const UA_ByteString *src);
+UA_Boolean
+isJsonNull(const CtxJson *ctx, const ParseCtx *parseCtx);
 
-#ifdef __cplusplus
-}
-#endif
+_UA_END_DECLS
 
 #endif /* UA_TYPES_ENCODING_JSON_H_ */

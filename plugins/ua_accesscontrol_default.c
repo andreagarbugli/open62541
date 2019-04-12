@@ -1,11 +1,11 @@
 /* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. 
+ * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
  *
  *    Copyright 2016-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
  */
 
-#include "ua_accesscontrol_default.h"
+#include <open62541/plugin/accesscontrol_default.h>
 
 /* Example access control management. Anonymous and username / password login.
  * The access rights are maximally permissive. */
@@ -32,7 +32,7 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
                         const UA_NodeId *sessionId,
                         const UA_ExtensionObject *userIdentityToken,
                         void **sessionContext) {
-    AccessControlContext *context = (AccessControlContext*)ac->context;
+    AccessControlContext *context = (AccessControlContext *)ac->context;
 
     /* The empty token is interpreted as anonymous */
     if(userIdentityToken->encoding == UA_EXTENSIONOBJECT_ENCODED_NOBODY) {
@@ -49,12 +49,13 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
         return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
     /* Anonymous login */
-    if(userIdentityToken->content.decoded.type == &UA_TYPES[UA_TYPES_ANONYMOUSIDENTITYTOKEN]) {
+    if(userIdentityToken->content.decoded.type ==
+       &UA_TYPES[UA_TYPES_ANONYMOUSIDENTITYTOKEN]) {
         if(!context->allowAnonymous)
             return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
-        const UA_AnonymousIdentityToken *token = (UA_AnonymousIdentityToken*)
-            userIdentityToken->content.decoded.data;
+        const UA_AnonymousIdentityToken *token =
+            (UA_AnonymousIdentityToken *)userIdentityToken->content.decoded.data;
 
         /* Compatibility notice: Siemens OPC Scout v10 provides an empty
          * policyId. This is not compliant. For compatibility, assume that empty
@@ -68,9 +69,10 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
     }
 
     /* Username and password */
-    if(userIdentityToken->content.decoded.type == &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN]) {
+    if(userIdentityToken->content.decoded.type ==
+       &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN]) {
         const UA_UserNameIdentityToken *userToken =
-            (UA_UserNameIdentityToken*)userIdentityToken->content.decoded.data;
+            (UA_UserNameIdentityToken *)userIdentityToken->content.decoded.data;
 
         if(!UA_String_equal(&userToken->policyId, &username_policy))
             return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
@@ -86,8 +88,10 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
         /* Try to match username/pw */
         UA_Boolean match = false;
         for(size_t i = 0; i < context->usernamePasswordLoginSize; i++) {
-            if(UA_String_equal(&userToken->userName, &context->usernamePasswordLogin[i].username) &&
-               UA_String_equal(&userToken->password, &context->usernamePasswordLogin[i].password)) {
+            if(UA_String_equal(&userToken->userName,
+                               &context->usernamePasswordLogin[i].username) &&
+               UA_String_equal(&userToken->password,
+                               &context->usernamePasswordLogin[i].password)) {
                 match = true;
                 break;
             }
@@ -105,8 +109,8 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
 }
 
 static void
-closeSession_default(UA_Server *server, UA_AccessControl *ac,
-                     const UA_NodeId *sessionId, void *sessionContext) {
+closeSession_default(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId,
+                     void *sessionContext) {
     /* no context to clean up */
 }
 
@@ -140,9 +144,8 @@ getUserExecutableOnObject_default(UA_Server *server, UA_AccessControl *ac,
 }
 
 static UA_Boolean
-allowAddNode_default(UA_Server *server, UA_AccessControl *ac,
-                     const UA_NodeId *sessionId, void *sessionContext,
-                     const UA_AddNodesItem *item) {
+allowAddNode_default(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId,
+                     void *sessionContext, const UA_AddNodesItem *item) {
     return true;
 }
 
@@ -179,8 +182,8 @@ allowHistoryUpdateUpdateData_default(UA_Server *server, UA_AccessControl *ac,
 
 static UA_Boolean
 allowHistoryUpdateDeleteRawModified_default(UA_Server *server, UA_AccessControl *ac,
-                                            const UA_NodeId *sessionId, void *sessionContext,
-                                            const UA_NodeId *nodeId,
+                                            const UA_NodeId *sessionId,
+                                            void *sessionContext, const UA_NodeId *nodeId,
                                             UA_DateTime startTimestamp,
                                             UA_DateTime endTimestamp,
                                             bool isDeleteModified) {
@@ -192,14 +195,14 @@ allowHistoryUpdateDeleteRawModified_default(UA_Server *server, UA_AccessControl 
 /* Create Delete Access Control Plugin */
 /***************************************/
 
-static void deleteMembers_default(UA_AccessControl *ac) {
-    UA_Array_delete((void*)(uintptr_t)ac->userTokenPolicies,
-                    ac->userTokenPoliciesSize,
+static void
+deleteMembers_default(UA_AccessControl *ac) {
+    UA_Array_delete((void *)(uintptr_t)ac->userTokenPolicies, ac->userTokenPoliciesSize,
                     &UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
 
-    AccessControlContext *context = (AccessControlContext*)ac->context;
+    AccessControlContext *context = (AccessControlContext *)ac->context;
 
-    if (context) {
+    if(context) {
         for(size_t i = 0; i < context->usernamePasswordLoginSize; i++) {
             UA_String_deleteMembers(&context->usernamePasswordLogin[i].username);
             UA_String_deleteMembers(&context->usernamePasswordLogin[i].password);
@@ -211,8 +214,8 @@ static void deleteMembers_default(UA_AccessControl *ac) {
 }
 
 UA_StatusCode
-UA_AccessControl_default(UA_AccessControl *ac,
-                         UA_Boolean allowAnonymous, size_t usernamePasswordLoginSize,
+UA_AccessControl_default(UA_AccessControl *ac, UA_Boolean allowAnonymous,
+                         size_t usernamePasswordLoginSize,
                          const UA_UsernamePasswordLogin *usernamePasswordLogin) {
     ac->deleteMembers = deleteMembers_default;
     ac->activateSession = activateSession_default;
@@ -232,9 +235,9 @@ UA_AccessControl_default(UA_AccessControl *ac,
     ac->allowDeleteNode = allowDeleteNode_default;
     ac->allowDeleteReference = allowDeleteReference_default;
 
-    AccessControlContext *context = (AccessControlContext*)
-            UA_malloc(sizeof(AccessControlContext));
-    if (!context)
+    AccessControlContext *context =
+        (AccessControlContext *)UA_malloc(sizeof(AccessControlContext));
+    if(!context)
         return UA_STATUSCODE_BADOUTOFMEMORY;
     memset(context, 0, sizeof(AccessControlContext));
     ac->context = context;
@@ -244,14 +247,16 @@ UA_AccessControl_default(UA_AccessControl *ac,
 
     /* Copy username/password to the access control plugin */
     if(usernamePasswordLoginSize > 0) {
-        context->usernamePasswordLogin = (UA_UsernamePasswordLogin*)
-            UA_malloc(usernamePasswordLoginSize * sizeof(UA_UsernamePasswordLogin));
+        context->usernamePasswordLogin = (UA_UsernamePasswordLogin *)UA_malloc(
+            usernamePasswordLoginSize * sizeof(UA_UsernamePasswordLogin));
         if(!context->usernamePasswordLogin)
             return UA_STATUSCODE_BADOUTOFMEMORY;
         context->usernamePasswordLoginSize = usernamePasswordLoginSize;
         for(size_t i = 0; i < usernamePasswordLoginSize; i++) {
-            UA_String_copy(&usernamePasswordLogin[i].username, &context->usernamePasswordLogin[i].username);
-            UA_String_copy(&usernamePasswordLogin[i].password, &context->usernamePasswordLogin[i].password);
+            UA_String_copy(&usernamePasswordLogin[i].username,
+                           &context->usernamePasswordLogin[i].username);
+            UA_String_copy(&usernamePasswordLogin[i].password,
+                           &context->usernamePasswordLogin[i].password);
         }
     }
 
@@ -262,8 +267,8 @@ UA_AccessControl_default(UA_AccessControl *ac,
     if(usernamePasswordLoginSize > 0)
         policies++;
     ac->userTokenPoliciesSize = 0;
-    ac->userTokenPolicies = (UA_UserTokenPolicy *)
-        UA_Array_new(policies, &UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
+    ac->userTokenPolicies =
+        (UA_UserTokenPolicy *)UA_Array_new(policies, &UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
     if(!ac->userTokenPolicies)
         return UA_STATUSCODE_BADOUTOFMEMORY;
     ac->userTokenPoliciesSize = policies;
@@ -272,7 +277,7 @@ UA_AccessControl_default(UA_AccessControl *ac,
     if(allowAnonymous) {
         ac->userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_ANONYMOUS;
         ac->userTokenPolicies[policies].policyId = UA_STRING_ALLOC(ANONYMOUS_POLICY);
-        if (!ac->userTokenPolicies[policies].policyId.data)
+        if(!ac->userTokenPolicies[policies].policyId.data)
             return UA_STATUSCODE_BADOUTOFMEMORY;
         policies++;
     }
@@ -280,12 +285,12 @@ UA_AccessControl_default(UA_AccessControl *ac,
     if(usernamePasswordLoginSize > 0) {
         ac->userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_USERNAME;
         ac->userTokenPolicies[policies].policyId = UA_STRING_ALLOC(USERNAME_POLICY);
-        if (!ac->userTokenPolicies[policies].policyId.data)
+        if(!ac->userTokenPolicies[policies].policyId.data)
             return UA_STATUSCODE_BADOUTOFMEMORY;
         /* No encryption of username/password supported at the moment */
         ac->userTokenPolicies[policies].securityPolicyUri =
             UA_STRING_ALLOC("http://opcfoundation.org/UA/SecurityPolicy#None");
-        if (!ac->userTokenPolicies[policies].securityPolicyUri.data)
+        if(!ac->userTokenPolicies[policies].securityPolicyUri.data)
             return UA_STATUSCODE_BADOUTOFMEMORY;
     }
     return UA_STATUSCODE_GOOD;

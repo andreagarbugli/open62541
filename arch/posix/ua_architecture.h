@@ -14,60 +14,60 @@
 
 /* Enable POSIX features */
 #if !defined(_XOPEN_SOURCE)
-# define _XOPEN_SOURCE 600
+#define _XOPEN_SOURCE 600
 #endif
 #ifndef _DEFAULT_SOURCE
-# define _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
 #endif
 /* On older systems we need to define _BSD_SOURCE.
  * _DEFAULT_SOURCE is an alias for that. */
 #ifndef _BSD_SOURCE
-# define _BSD_SOURCE
+#define _BSD_SOURCE
 #endif
 
 #include <errno.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <netdb.h>
+
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/types.h>
-#include <net/if.h>
 #ifndef UA_sleep_ms
-# include <unistd.h>
-# define UA_sleep_ms(X) usleep(X * 1000)
+#include <unistd.h>
+#define UA_sleep_ms(X) usleep(X * 1000)
 #endif
 
 #define OPTVAL_TYPE int
 
 #include <fcntl.h>
-#include <unistd.h> // read, write, close
+#include <unistd.h>  // read, write, close
 
 #ifdef __QNX__
-# include <sys/socket.h>
+#include <sys/socket.h>
 #endif
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
-# include <sys/param.h>
-# if defined(BSD)
-#  include<sys/socket.h>
-# endif
+#include <sys/param.h>
+#if defined(BSD)
+#include <sys/socket.h>
+#endif
 #endif
 #if !defined(__CYGWIN__)
-# include <netinet/tcp.h>
+#include <netinet/tcp.h>
 #endif
 
 /* unsigned int for windows and workaround to a glibc bug */
 /* Additionally if GNU_LIBRARY is not defined, it may be using
  * musl libc (e.g. Docker Alpine) */
-#if  defined(__OpenBSD__) || \
-    (defined(__GNU_LIBRARY__) && (__GNU_LIBRARY__ <= 6) && \
-     (__GLIBC__ <= 2) && (__GLIBC_MINOR__ < 16) || \
-    !defined(__GNU_LIBRARY__))
-# define UA_fd_set(fd, fds) FD_SET((unsigned int)fd, fds)
-# define UA_fd_isset(fd, fds) FD_ISSET((unsigned int)fd, fds)
+#if defined(__OpenBSD__) || (defined(__GNU_LIBRARY__) && (__GNU_LIBRARY__ <= 6) &&       \
+                                 (__GLIBC__ <= 2) && (__GLIBC_MINOR__ < 16) ||           \
+                             !defined(__GNU_LIBRARY__))
+#define UA_fd_set(fd, fds) FD_SET((unsigned int)fd, fds)
+#define UA_fd_isset(fd, fds) FD_ISSET((unsigned int)fd, fds)
 #else
-# define UA_fd_set(fd, fds) FD_SET(fd, fds)
-# define UA_fd_isset(fd, fds) FD_ISSET(fd, fds)
+#define UA_fd_set(fd, fds) FD_SET(fd, fds)
+#define UA_fd_isset(fd, fds) FD_ISSET(fd, fds)
 #endif
 
 #define UA_access access
@@ -106,7 +106,18 @@
 #define UA_gethostname gethostname
 #define UA_inet_pton inet_pton
 #if UA_IPV6
-# define UA_if_nametoindex if_nametoindex
+#define UA_if_nametoindex if_nametoindex
+#endif
+
+#ifdef UA_ENABLE_MALLOC_SINGLETON
+extern void *(*UA_globalMalloc)(size_t size);
+extern void (*UA_globalFree)(void *ptr);
+extern void *(*UA_globalCalloc)(size_t nelem, size_t elsize);
+extern void *(*UA_globalRealloc)(void *ptr, size_t size);
+#define UA_free(ptr) UA_globalFree(ptr)
+#define UA_malloc(size) UA_globalMalloc(size)
+#define UA_calloc(num, size) UA_globalCalloc(num, size)
+#define UA_realloc(ptr, size) UA_globalRealloc(ptr, size)
 #endif
 
 #include <stdlib.h>
@@ -126,19 +137,22 @@
 #include <stdio.h>
 #define UA_snprintf snprintf
 
-#define UA_LOG_SOCKET_ERRNO_WRAP(LOG) { \
-    char *errno_str = strerror(errno); \
-    LOG; \
-}
-#define UA_LOG_SOCKET_ERRNO_GAI_WRAP(LOG) { \
-    const char *errno_str = gai_strerror(errno); \
-    LOG; \
-}
+#define UA_LOG_SOCKET_ERRNO_WRAP(LOG)                                                    \
+    {                                                                                    \
+        char *errno_str = strerror(errno);                                               \
+        LOG;                                                                             \
+    }
+#define UA_LOG_SOCKET_ERRNO_GAI_WRAP(LOG)                                                \
+    {                                                                                    \
+        const char *errno_str = gai_strerror(errno);                                     \
+        LOG;                                                                             \
+    }
 
 #include "ua_architecture_functions.h"
 
-#if defined(__APPLE__)  && defined(_SYS_QUEUE_H_)
-//  in some compilers there's already a _SYS_QUEUE_H_ which is included first and doesn't have all functions
+#if defined(__APPLE__) && defined(_SYS_QUEUE_H_)
+//  in some compilers there's already a _SYS_QUEUE_H_ which is included first and doesn't
+//  have all functions
 
 #undef SLIST_HEAD
 #undef SLIST_HEAD_INITIALIZER
@@ -244,7 +258,6 @@
 #undef _SYS_QUEUE_H_
 
 #endif /* defined(__APPLE__)  && defined(_SYS_QUEUE_H_) */
-
 
 #endif /* PLUGINS_ARCH_POSIX_UA_ARCHITECTURE_H_ */
 

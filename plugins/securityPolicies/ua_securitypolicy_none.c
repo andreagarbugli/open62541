@@ -1,54 +1,44 @@
 /* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. 
+ * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
  *
  *    Copyright 2017-2018 (c) Mark Giraud, Fraunhofer IOSB
  *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
  */
 
-#include "ua_types.h"
-#include "ua_securitypolicies.h"
-#include "ua_types_generated_handling.h"
+#include <open62541/plugin/securitypolicy_default.h>
 
 static UA_StatusCode
-verify_none(const UA_SecurityPolicy *securityPolicy,
-            void *channelContext,
-            const UA_ByteString *message,
-            const UA_ByteString *signature) {
+verify_none(const UA_SecurityPolicy *securityPolicy, void *channelContext,
+            const UA_ByteString *message, const UA_ByteString *signature) {
     return UA_STATUSCODE_GOOD;
 }
 
 static UA_StatusCode
-sign_none(const UA_SecurityPolicy *securityPolicy,
-          void *channelContext,
-          const UA_ByteString *message,
-          UA_ByteString *signature) {
+sign_none(const UA_SecurityPolicy *securityPolicy, void *channelContext,
+          const UA_ByteString *message, UA_ByteString *signature) {
     return UA_STATUSCODE_GOOD;
 }
 
 static size_t
-length_none(const UA_SecurityPolicy *securityPolicy,
-            const void *channelContext) {
+length_none(const UA_SecurityPolicy *securityPolicy, const void *channelContext) {
     return 0;
 }
 
 static UA_StatusCode
-encrypt_none(const UA_SecurityPolicy *securityPolicy,
-             void *channelContext,
+encrypt_none(const UA_SecurityPolicy *securityPolicy, void *channelContext,
              UA_ByteString *data) {
     return UA_STATUSCODE_GOOD;
 }
 
 static UA_StatusCode
-decrypt_none(const UA_SecurityPolicy *securityPolicy,
-             void *channelContext,
+decrypt_none(const UA_SecurityPolicy *securityPolicy, void *channelContext,
              UA_ByteString *data) {
     return UA_STATUSCODE_GOOD;
 }
 
 static UA_StatusCode
 makeThumbprint_none(const UA_SecurityPolicy *securityPolicy,
-                    const UA_ByteString *certificate,
-                    UA_ByteString *thumbprint) {
+                    const UA_ByteString *certificate, UA_ByteString *thumbprint) {
     return UA_STATUSCODE_GOOD;
 }
 
@@ -59,10 +49,8 @@ compareThumbprint_none(const UA_SecurityPolicy *securityPolicy,
 }
 
 static UA_StatusCode
-generateKey_none(const UA_SecurityPolicy *securityPolicy,
-                 const UA_ByteString *secret,
-                 const UA_ByteString *seed,
-                 UA_ByteString *out) {
+generateKey_none(const UA_SecurityPolicy *securityPolicy, const UA_ByteString *secret,
+                 const UA_ByteString *seed, UA_ByteString *out) {
     return UA_STATUSCODE_GOOD;
 }
 
@@ -80,7 +68,7 @@ generateNonce_none(const UA_SecurityPolicy *securityPolicy, UA_ByteString *out) 
     while(i + 3 < out->length) {
         UA_UInt32 rand = UA_UInt32_random();
         memcpy(&out->data[i], &rand, 4);
-        i = i+4;
+        i = i + 4;
     }
 
     /* Fill the remaining byte */
@@ -92,24 +80,20 @@ generateNonce_none(const UA_SecurityPolicy *securityPolicy, UA_ByteString *out) 
 
 static UA_StatusCode
 newContext_none(const UA_SecurityPolicy *securityPolicy,
-                const UA_ByteString *remoteCertificate,
-                void **channelContext) {
+                const UA_ByteString *remoteCertificate, void **channelContext) {
     return UA_STATUSCODE_GOOD;
 }
 
 static void
-deleteContext_none(void *channelContext) {
-}
+deleteContext_none(void *channelContext) {}
 
 static UA_StatusCode
-setContextValue_none(void *channelContext,
-                     const UA_ByteString *key) {
+setContextValue_none(void *channelContext, const UA_ByteString *key) {
     return UA_STATUSCODE_GOOD;
 }
 
 static UA_StatusCode
-compareCertificate_none(const void *channelContext,
-                        const UA_ByteString *certificate) {
+compareCertificate_none(const void *channelContext, const UA_ByteString *certificate) {
     return UA_STATUSCODE_GOOD;
 }
 
@@ -121,7 +105,6 @@ updateCertificateAndPrivateKey_none(UA_SecurityPolicy *policy,
     UA_ByteString_copy(&newCertificate, &policy->localCertificate);
     return UA_STATUSCODE_GOOD;
 }
-
 
 static void
 policy_deletemembers_none(UA_SecurityPolicy *policy) {
@@ -167,11 +150,13 @@ UA_SecurityPolicy_None(UA_SecurityPolicy *policy,
     policy->asymmetricModule.makeCertificateThumbprint = makeThumbprint_none;
     policy->asymmetricModule.compareCertificateThumbprint = compareThumbprint_none;
 
-    // This only works for none since symmetric and asymmetric crypto modules do the same i.e. nothing
+    // This only works for none since symmetric and asymmetric crypto modules do the same
+    // i.e. nothing
     policy->asymmetricModule.cryptoModule = policy->symmetricModule.cryptoModule;
 
     // Use the same signing algorithm as for asymmetric signing
-    policy->certificateSigningAlgorithm = policy->asymmetricModule.cryptoModule.signatureAlgorithm;
+    policy->certificateSigningAlgorithm =
+        policy->asymmetricModule.cryptoModule.signatureAlgorithm;
 
     policy->channelModule.newContext = newContext_none;
     policy->channelModule.deleteContext = deleteContext_none;

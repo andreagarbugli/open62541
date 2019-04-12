@@ -9,25 +9,26 @@
 #ifndef PLUGINS_ARCH_ECOS_UA_ARCHITECTURE_H_
 #define PLUGINS_ARCH_ECOS_UA_ARCHITECTURE_H_
 
-#include <pkgconf/system.h>
-#include <cyg/kernel/kapi.h>
-#include <cyg/io/io.h>
-
 #include <network.h>
-
 #include <stdio.h>
-#include <string.h>
-#include <netinet/tcp.h>
 #include <stdlib.h>
+#include <string.h>
 
-#define UA_sleep_ms(X) cyg_thread_delay(1 + ((1000 * X * CYGNUM_HAL_RTC_DENOMINATOR) / (CYGNUM_HAL_RTC_NUMERATOR / 1000)));
+#include <cyg/io/io.h>
+#include <cyg/kernel/kapi.h>
+#include <netinet/tcp.h>
+#include <pkgconf/system.h>
+
+#define UA_sleep_ms(X)                                                                   \
+    cyg_thread_delay(1 + ((1000 * X * CYGNUM_HAL_RTC_DENOMINATOR) /                      \
+                          (CYGNUM_HAL_RTC_NUMERATOR / 1000)));
 
 #define OPTVAL_TYPE int
 
 #define UA_fd_set(fd, fds) FD_SET((unsigned int)fd, fds)
 #define UA_fd_isset(fd, fds) FD_ISSET((unsigned int)fd, fds)
 
-#define UA_access(x,y) 0
+#define UA_access(x, y) 0
 
 #define UA_IPV6 1
 #define UA_SOCKET int
@@ -59,12 +60,13 @@
 #define UA_setsockopt setsockopt
 #define UA_freeaddrinfo freeaddrinfo
 #define UA_gethostname gethostname_ecos
-#define UA_inet_pton(af,src,dst) inet_pton(af, src, (char*) dst)
+#define UA_inet_pton(af, src, dst) inet_pton(af, src, (char *)dst)
 #if UA_IPV6
-# define UA_if_nametoindex if_nametoindex
+#define UA_if_nametoindex if_nametoindex
 #endif
 
-int gethostname_ecos(char* name, size_t len);
+int
+gethostname_ecos(char *name, size_t len);
 
 #define UA_free free
 #define UA_malloc malloc
@@ -73,14 +75,16 @@ int gethostname_ecos(char* name, size_t len);
 
 #define UA_snprintf snprintf
 
-#define UA_LOG_SOCKET_ERRNO_WRAP(LOG) { \
-    char *errno_str = strerror(errno); \
-    LOG; \
-}
-#define UA_LOG_SOCKET_ERRNO_GAI_WRAP(LOG) { \
-    const char *errno_str = gai_strerror(errno); \
-    LOG; \
-}
+#define UA_LOG_SOCKET_ERRNO_WRAP(LOG)                                                    \
+    {                                                                                    \
+        char *errno_str = strerror(errno);                                               \
+        LOG;                                                                             \
+    }
+#define UA_LOG_SOCKET_ERRNO_GAI_WRAP(LOG)                                                \
+    {                                                                                    \
+        const char *errno_str = gai_strerror(errno);                                     \
+        LOG;                                                                             \
+    }
 
 #include "ua_architecture_functions.h"
 
