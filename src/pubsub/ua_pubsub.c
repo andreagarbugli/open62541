@@ -625,13 +625,6 @@ UA_Server_addDataSetWriter(UA_Server *server, const UA_NodeId writerGroup,
     addDataSetWriterRepresentation(server, newDataSetWriter);
 #endif
 
-#ifdef UA_ENABLE_PUBSUB_CUSTOM
-    if(wg->config.enableRealTime) {
-        /* Run once after creation */
-        UA_WriterGroup_publishCallback(server, wg);
-    }
-#endif
-
     return retVal;
 }
 
@@ -1291,7 +1284,7 @@ sendNetworkMessage(UA_PubSubConnection *connection, UA_WriterGroup *wg,
     if (nm.timestampEnabled == UA_TRUE)
     {
         struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
+        clock_gettime(CLOCK_TAI, &ts);
         nm.timestamp = ts.tv_sec * ONE_SEC + ts.tv_nsec;
     }
 

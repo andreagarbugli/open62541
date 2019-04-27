@@ -13,11 +13,14 @@
 #include <netinet/ether.h>
 #include <time.h>
 
+#include <linux/errqueue.h>
+#include <poll.h>
+
 #ifndef ETHERTYPE_UADP
 #define ETHERTYPE_UADP 0xb62c
 #endif
 
-#define SO_SNDBUF_SIZE 5000
+#define SO_SNDBUF_SIZE 10000
 
 /* Ethernet network layer specific internal data */
 typedef struct {
@@ -359,6 +362,7 @@ UA_PubSubChannelEthernetTSN_send(UA_PubSubChannel *channel,
     memcpy(sinll.sll_addr, channelDataEthernet->targetAddress, ETH_ALEN);
 
     char control[CMSG_SPACE(sizeof(channelDataEthernet->txTimestamp))] = {0};
+ 
     struct cmsghdr *cmsg;
     struct msghdr msg;
     struct iovec iov;
@@ -383,33 +387,16 @@ UA_PubSubChannelEthernetTSN_send(UA_PubSubChannel *channel,
         cmsg->cmsg_level = SOL_SOCKET;
         cmsg->cmsg_type = SCM_TXTIME;
         cmsg->cmsg_len = CMSG_LEN(sizeof(__u64));
-        *((__u64 *) CMSG_DATA(cmsg)) = channelDataEthernet->txTimestamp;
+        *((__u64 *) CMSG_DATA(cmsg)) = channel->txTimestamp;
     }
 
     /* Use sendmsg to transmit with TXTIME in the CMSG */
     ssize_t rc = sendmsg(channel->sockfd, &msg, 0);
     if(rc  < 0) {
-        if (errno == 105) {
-            /* Packet was late, likely due to app's internal timing is slipping */
-            struct timespec ts_x;
-
-            /* Find the clock difference and pass it back to the callback */
-            clock_gettime(CLOCK_TAI, &ts_x);
-            channel->txTimestampCorrection = channel->txTimestamp - (UA_UInt64) (ts_x.tv_sec * 1000000000 - ts_x.tv_nsec);
-
-            UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
-                         "PubSub connection send failed. Packet was late.\n");
-
-            /* Skip this packet, do not print warning as it might affect
-             * the timestamp correction mechanism.
-             */
-            return UA_TIMESTAMPSTORETURN_INVALID;
-        }
-
-        perror("send error");
 
         UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
             "PubSub connection send failed. Send message failed %d.\n", errno);
+
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
