@@ -199,8 +199,7 @@ if(UA_ENABLE_PUBSUB)
 
     # modified version for TSN
     if(UA_ENABLE_PUBSUB_CUSTOM)
-        add_example(pubsub_custom_publisher pubsub/pubsub_custom_publisher.c
-                ${CMAKE_SOURCE_DIR}/plugins/networking/ua_network_pubsub_udp_tai.c)
+        add_example(pubsub_custom_publisher pubsub/pubsub_custom_publisher.c)
         target_link_libraries(pubsub_custom_publisher Threads::Threads)
     endif()
 

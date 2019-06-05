@@ -106,12 +106,6 @@ _UA_BEGIN_DECLS
  * Take a look on the PubSub Tutorials for mor details about the API usage.
  */
 
-#ifdef UA_ENABLE_PUBSUB_CUSTOM
-
-#include "ua_pubsub_networkmessage.h"
-
-#endif
-
 typedef enum {
     UA_PUBSUB_PUBLISHERID_NUMERIC,
     UA_PUBSUB_PUBLISHERID_STRING
@@ -132,10 +126,11 @@ typedef struct {
     UA_Variant connectionTransportSettings;
 
 #ifdef UA_ENABLE_PUBSUB_CUSTOM
-    UA_Boolean useSoTxTime;
-    UA_UInt16 useDeadlineMode;
-    UA_UInt16 receiveErrors;
-    UA_Int32 soPriority;
+    UA_Boolean soTxTimeEnable;
+    UA_UInt16 soTxTimeEnbableDeadlineMode;
+    UA_UInt16 soTxTimeReceiveErrors;
+    UA_Int32 soTxTimePriority;
+    clockid_t soTxTimeClockId;
 #endif
 
 } UA_PubSubConnectionConfig;
@@ -318,6 +313,11 @@ typedef struct {
 
 #ifdef UA_ENABLE_PUBSUB_CUSTOM
     UA_Boolean enableRealTime;
+    UA_ServerCallback pubCallback;
+    void *pubData;
+    UA_UInt64 publishingOffset;
+    UA_UInt64 earlySamplingOffset;
+    struct timespec samplingTime; 
 #endif
 
 } UA_WriterGroupConfig;

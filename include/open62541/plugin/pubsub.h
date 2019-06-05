@@ -14,6 +14,23 @@ _UA_BEGIN_DECLS
 
 #ifdef UA_ENABLE_PUBSUB
 
+#ifdef UA_ENABLE_PUBSUB_CUSTOM
+
+struct sock_txtime {
+    clockid_t clockid;
+    uint16_t flags;
+};
+
+enum txtime_flags {
+    SOF_TXTIME_DEADLINE_MODE = (1 << 0),
+    SOF_TXTIME_REPORT_ERRORS = (1 << 1),
+
+    SOF_TXTIME_FLAGS_LAST = SOF_TXTIME_REPORT_ERRORS,
+    SOF_TXTIME_FLAGS_MASK = (SOF_TXTIME_FLAGS_LAST - 1) | SOF_TXTIME_FLAGS_LAST
+};
+
+#endif
+
 /**
  * .. _pubsub_connection:
  *
@@ -46,6 +63,8 @@ struct UA_PubSubChannel {
     UA_UInt32 publisherId; /* unique identifier */
     UA_PubSubChannelState state;
     UA_PubSubConnectionConfig *connectionConfig; /* link to parent connection config */
+    UA_UInt64 txTimestamp;  /* Absolute timestamp of sending frame at publishingInterval + publishingOffset */
+    UA_UInt64 txTimestampCorrection;  /* Time needed to re-align the transmit timestamp when delay occurs */
     UA_SOCKET sockfd;
     void *handle; /* implementation specific data */
     /*@info for handle: each network implementation should provide an structure

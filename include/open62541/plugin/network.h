@@ -139,13 +139,13 @@ UA_Connection_deleteMembers(UA_Connection *connection);
  * transport.) After processing, the message is freed with
  * connection->releaseRecvBuffer. */
 void UA_EXPORT
-UA_Server_processBinaryMessage(UA_Server *server, UA_Connection *connection,
+UA_Server_processBinaryMessage(UA_Server *server, UA_Connection *pubSubConnection,
                                UA_ByteString *message);
 
 /* The server internally cleans up the connection and then calls
  * connection->free. */
 void UA_EXPORT
-UA_Server_removeConnection(UA_Server *server, UA_Connection *connection);
+UA_Server_removeConnection(UA_Server *server, UA_Connection *pubSubConnection);
 
 struct UA_ServerNetworkLayer {
     void *handle; /* Internal data */

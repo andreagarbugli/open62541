@@ -15,7 +15,7 @@
 //#endif
 
 #include <open62541/plugin/log_stdout.h>
-#include <open62541/plugin/pubsub_udp.h>
+#include <open62541/plugin/pubsub_udp_tsn.h>
 #include <open62541/util.h>
 
 #include <time.h>
@@ -31,15 +31,6 @@
 
 #define ONE_SEC 1000000000ULL
 
-struct sock_txtime {
-    clockid_t clockid;
-    uint16_t flags;
-};
-
-// This has to be set in the publisher
-// at every publish cycle.
-extern __u64 nextCycleStartTime;
-
 // UDP multicast network layer specific internal data
 typedef struct {
     int ai_family;  // Protocol family for socket.  IPv4/IPv6
@@ -48,7 +39,7 @@ typedef struct {
     UA_UInt32 messageTTL;
     UA_Boolean enableLoopback;
     UA_Boolean enableReuse;
-} UA_PubSubChannelDataUDPMC;
+} UA_PubSubChannelDataUDPTSN;
 
 /**
  * Open communication socket based on the connectionConfig. Protocol specific parameters
@@ -58,7 +49,7 @@ typedef struct {
  * @return ref to created channel, NULL on error
  */
 static UA_PubSubChannel *
-UA_PubSubChannelUDPMC_open(const UA_PubSubConnectionConfig *connectionConfig) {
+UA_PubSubChannelUDPTSN_open(const UA_PubSubConnectionConfig *connectionConfig) {
     UA_initialize_architecture_network();
 
     UA_NetworkAddressUrlDataType address;
@@ -72,8 +63,8 @@ UA_PubSubChannelUDPMC_open(const UA_PubSubConnectionConfig *connectionConfig) {
     }
 
     // allocate and init memory for the UDP multicast specific internal data
-    UA_PubSubChannelDataUDPMC *channelDataUDPMC =
-        (UA_PubSubChannelDataUDPMC *)UA_calloc(1, (sizeof(UA_PubSubChannelDataUDPMC)));
+    UA_PubSubChannelDataUDPTSN *channelDataUDPMC =
+        (UA_PubSubChannelDataUDPTSN *)UA_calloc(1, (sizeof(UA_PubSubChannelDataUDPTSN)));
     if(!channelDataUDPMC) {
         UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
                      "PubSub Connection creation failed. Out of memory.");
@@ -81,8 +72,8 @@ UA_PubSubChannelUDPMC_open(const UA_PubSubConnectionConfig *connectionConfig) {
     }
 
     // set default values
-    UA_PubSubChannelDataUDPMC defaultValues = {0, NULL, 255, UA_TRUE, UA_TRUE};
-    memcpy(channelDataUDPMC, &defaultValues, sizeof(UA_PubSubChannelDataUDPMC));
+    UA_PubSubChannelDataUDPTSN defaultValues = {0, NULL, 255, UA_TRUE, UA_TRUE};
+    memcpy(channelDataUDPMC, &defaultValues, sizeof(UA_PubSubChannelDataUDPTSN));
 
     // iterate over the given KeyValuePair paramters
     UA_String ttlParam = UA_STRING("ttl"), loopbackParam = UA_STRING("loopback"),
@@ -323,9 +314,9 @@ UA_PubSubChannelUDPMC_open(const UA_PubSubConnectionConfig *connectionConfig) {
     static struct sock_txtime sockTxtime;
     sockTxtime.clockid = CLOCK_TAI;
     sockTxtime.flags =
-        (connectionConfig->useDeadlineMode | connectionConfig->receiveErrors);
+        (connectionConfig->soTxTimeEnbableDeadlineMode | connectionConfig->soTxTimeReceiveErrors);
 
-    if(connectionConfig->useSoTxTime &&
+    if(connectionConfig->soTxTimeEnable &&
        setsockopt(newChannel->sockfd, SOL_SOCKET, SO_TXTIME, &sockTxtime,
                   sizeof(sockTxtime))) {
         perror("###### SOCKET ERROR: ");
@@ -340,7 +331,7 @@ UA_PubSubChannelUDPMC_open(const UA_PubSubConnectionConfig *connectionConfig) {
     }
 
     if(setsockopt(newChannel->sockfd, SOL_SOCKET, SO_PRIORITY,
-                  &connectionConfig->soPriority, sizeof(UA_Int32))) {
+                  &connectionConfig->soTxTimePriority, sizeof(UA_Int32))) {
         UA_LOG_ERROR(
             UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
             "PubSub Connection creation problem. Set socket option SO_PRIORITY failed.");
@@ -361,10 +352,10 @@ UA_PubSubChannelUDPMC_open(const UA_PubSubConnectionConfig *connectionConfig) {
  * @return UA_STATUSCODE_GOOD on success
  */
 static UA_StatusCode
-UA_PubSubChannelUDPMC_regist(UA_PubSubChannel *channel,
-                             UA_ExtensionObject *transportSettings,
-                             void (*notUsedHere)(UA_ByteString *encodedBuffer,
-                                                 UA_ByteString *topic)) {
+UA_PubSubChannelUDPTSN_regist(UA_PubSubChannel *channel,
+                              UA_ExtensionObject *transportSettings,
+                              void (*notUsedHere)(UA_ByteString *encodedBuffer,
+                                                  UA_ByteString *topic)) {
     if(!(channel->state == UA_PUBSUB_CHANNEL_PUB ||
          channel->state == UA_PUBSUB_CHANNEL_RDY)) {
         UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
@@ -372,8 +363,8 @@ UA_PubSubChannelUDPMC_regist(UA_PubSubChannel *channel,
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    UA_PubSubChannelDataUDPMC *connectionConfig =
-        (UA_PubSubChannelDataUDPMC *)channel->handle;
+    UA_PubSubChannelDataUDPTSN *connectionConfig =
+        (UA_PubSubChannelDataUDPTSN *)channel->handle;
     if(connectionConfig->ai_family == PF_INET) {
         // IPv4 handling
         struct sockaddr_in addr;
@@ -421,8 +412,8 @@ UA_PubSubChannelUDPMC_regist(UA_PubSubChannel *channel,
  * @return UA_STATUSCODE_GOOD on success
  */
 static UA_StatusCode
-UA_PubSubChannelUDPMC_unregist(UA_PubSubChannel *channel,
-                               UA_ExtensionObject *transportSettings) {
+UA_PubSubChannelUDPTSN_unregist(UA_PubSubChannel *channel,
+                                UA_ExtensionObject *transportSettings) {
     if(!(channel->state == UA_PUBSUB_CHANNEL_PUB_SUB ||
          channel->state == UA_PUBSUB_CHANNEL_SUB)) {
         UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
@@ -430,8 +421,8 @@ UA_PubSubChannelUDPMC_unregist(UA_PubSubChannel *channel,
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    UA_PubSubChannelDataUDPMC *connectionConfig =
-        (UA_PubSubChannelDataUDPMC *)channel->handle;
+    UA_PubSubChannelDataUDPTSN *connectionConfig =
+        (UA_PubSubChannelDataUDPTSN *)channel->handle;
     if(connectionConfig->ai_family == PF_INET) {
         // IPv4 handling
         struct ip_mreq groupV4;
@@ -466,11 +457,11 @@ UA_PubSubChannelUDPMC_unregist(UA_PubSubChannel *channel,
  * @return UA_STATUSCODE_GOOD if success
  */
 static UA_StatusCode
-UA_PubSubChannelUDPMC_send(UA_PubSubChannel *channel,
-                           UA_ExtensionObject *transportSettigns,
-                           const UA_ByteString *buf) {
-    UA_PubSubChannelDataUDPMC *connectionConfig =
-        (UA_PubSubChannelDataUDPMC *)channel->handle;
+UA_PubSubChannelUDPTSN_send(UA_PubSubChannel *channel,
+                            UA_ExtensionObject *transportSettigns,
+                            const UA_ByteString *buf) {
+    UA_PubSubChannelDataUDPTSN *connectionConfig =
+        (UA_PubSubChannelDataUDPTSN *)channel->handle;
     if(!(channel->state == UA_PUBSUB_CHANNEL_PUB ||
          channel->state == UA_PUBSUB_CHANNEL_PUB_SUB)) {
         UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
@@ -495,7 +486,7 @@ UA_PubSubChannelUDPMC_send(UA_PubSubChannel *channel,
         msghdr.msg_iov = &iovec;
         msghdr.msg_iovlen = 1;
 
-        if(channel->connectionConfig->useSoTxTime) {
+        if(channel->connectionConfig->soTxTimeEnable) {
             msghdr.msg_control = control;
             msghdr.msg_controllen = sizeof(control);
 
@@ -505,8 +496,10 @@ UA_PubSubChannelUDPMC_send(UA_PubSubChannel *channel,
             cmsghdr->cmsg_type = SCM_TXTIME;
             cmsghdr->cmsg_len = CMSG_LEN(sizeof(__u64));
 
-            *((__u64 *)CMSG_DATA(cmsghdr)) = nextCycleStartTime;
+            *((__u64 *)CMSG_DATA(cmsghdr)) = 0; // TODO
         }
+
+        UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "PubSub Connection sending a real-time message.");
 
         ssize_t cnt = sendmsg(channel->sockfd, &msghdr, 0);
         if(cnt < 1) {
@@ -529,16 +522,16 @@ UA_PubSubChannelUDPMC_send(UA_PubSubChannel *channel,
  * @return
  */
 static UA_StatusCode
-UA_PubSubChannelUDPMC_receive(UA_PubSubChannel *channel, UA_ByteString *message,
-                              UA_ExtensionObject *transportSettigns, UA_UInt32 timeout) {
+UA_PubSubChannelUDPTSN_receive(UA_PubSubChannel *channel, UA_ByteString *message,
+                               UA_ExtensionObject *transportSettigns, UA_UInt32 timeout) {
     if(!(channel->state == UA_PUBSUB_CHANNEL_PUB ||
          channel->state == UA_PUBSUB_CHANNEL_PUB_SUB)) {
         UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
                      "PubSub Connection receive failed. Invalid state.");
         return UA_STATUSCODE_BADINTERNALERROR;
     }
-    UA_PubSubChannelDataUDPMC *channelConfigUDPMC =
-        (UA_PubSubChannelDataUDPMC *)channel->handle;
+    UA_PubSubChannelDataUDPTSN *channelConfigUDPMC =
+        (UA_PubSubChannelDataUDPTSN *)channel->handle;
 
     if(timeout > 0) {
         fd_set fdset;
@@ -580,7 +573,7 @@ UA_PubSubChannelUDPMC_receive(UA_PubSubChannel *channel, UA_ByteString *message,
  * @return UA_STATUSCODE_GOOD if success
  */
 static UA_StatusCode
-UA_PubSubChannelUDPMC_close(UA_PubSubChannel *channel) {
+UA_PubSubChannelUDPTSN_close(UA_PubSubChannel *channel) {
     if(UA_close(channel->sockfd) != 0) {
         UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
                      "PubSub Connection delete failed.");
@@ -588,8 +581,8 @@ UA_PubSubChannelUDPMC_close(UA_PubSubChannel *channel) {
     }
     UA_deinitialize_architecture_network();
     // cleanup the internal NetworkLayer data
-    UA_PubSubChannelDataUDPMC *networkLayerData =
-        (UA_PubSubChannelDataUDPMC *)channel->handle;
+    UA_PubSubChannelDataUDPTSN *networkLayerData =
+        (UA_PubSubChannelDataUDPTSN *)channel->handle;
     UA_free(networkLayerData->ai_addr);
     UA_free(networkLayerData);
     UA_free(channel);
@@ -603,15 +596,15 @@ UA_PubSubChannelUDPMC_close(UA_PubSubChannel *channel) {
  * @return  ref to created channel, NULL on error
  */
 static UA_PubSubChannel *
-TransportLayerUDPMC_addChannel(UA_PubSubConnectionConfig *connectionConfig) {
+TransportLayerUDPTSN_addChannel(UA_PubSubConnectionConfig *connectionConfig) {
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "PubSub channel requested");
-    UA_PubSubChannel *pubSubChannel = UA_PubSubChannelUDPMC_open(connectionConfig);
+    UA_PubSubChannel *pubSubChannel = UA_PubSubChannelUDPTSN_open(connectionConfig);
     if(pubSubChannel) {
-        pubSubChannel->regist = UA_PubSubChannelUDPMC_regist;
-        pubSubChannel->unregist = UA_PubSubChannelUDPMC_unregist;
-        pubSubChannel->send = UA_PubSubChannelUDPMC_send;
-        pubSubChannel->receive = UA_PubSubChannelUDPMC_receive;
-        pubSubChannel->close = UA_PubSubChannelUDPMC_close;
+        pubSubChannel->regist = UA_PubSubChannelUDPTSN_regist;
+        pubSubChannel->unregist = UA_PubSubChannelUDPTSN_unregist;
+        pubSubChannel->send = UA_PubSubChannelUDPTSN_send;
+        pubSubChannel->receive = UA_PubSubChannelUDPTSN_receive;
+        pubSubChannel->close = UA_PubSubChannelUDPTSN_close;
         pubSubChannel->connectionConfig = connectionConfig;
     }
     return pubSubChannel;
@@ -619,10 +612,10 @@ TransportLayerUDPMC_addChannel(UA_PubSubConnectionConfig *connectionConfig) {
 
 // UDPMC channel factory
 UA_PubSubTransportLayer
-UA_PubSubTransportLayerUDPMP() {
+UA_PubSubTransportLayerUDPTSN() {
     UA_PubSubTransportLayer pubSubTransportLayer;
     pubSubTransportLayer.transportProfileUri =
         UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-udp-uadp");
-    pubSubTransportLayer.createPubSubChannel = &TransportLayerUDPMC_addChannel;
+    pubSubTransportLayer.createPubSubChannel = &TransportLayerUDPTSN_addChannel;
     return pubSubTransportLayer;
 }

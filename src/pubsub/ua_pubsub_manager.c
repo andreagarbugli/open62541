@@ -355,8 +355,6 @@ UA_PubSubManager_delete(UA_Server *server, UA_PubSubManager *pubSubManager) {
 /* If UA_ENABLE_PUBSUB_CUSTOM_PUBLISH_INTERRUPT is enabled, a custom callback
  * management must be linked to the application */
 
-#ifndef UA_ENABLE_PUBSUB_CUSTOM
-
 UA_StatusCode
 UA_PubSubManager_addRepeatedCallback(UA_Server *server, UA_ServerCallback callback,
                                      void *data, UA_Double interval_ms,
@@ -364,8 +362,6 @@ UA_PubSubManager_addRepeatedCallback(UA_Server *server, UA_ServerCallback callba
     return UA_Timer_addRepeatedCallback(&server->timer, (UA_ApplicationCallback)callback,
                                         server, data, interval_ms, callbackId);
 }
-
-#endif /* UA_ENABLE_PUBSUB_CUSTOM */
 
 UA_StatusCode
 UA_PubSubManager_changeRepeatedCallbackInterval(UA_Server *server, UA_UInt64 callbackId,
